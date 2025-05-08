@@ -72,39 +72,42 @@ BandpowerResults smoothedPowers = {0};
 
 // --- Filter Functions ---
 // Band-Stop Butterworth IIR digital filter, generated using filter_gen.py.
-// Sampling rate: 500.0 Hz, frequency: [48.0, 52.0] Hz.
+// Sampling rate: 512.0 Hz, frequency: [48.0, 52.0] Hz.
 // Filter is order 2, implemented as second-order sections (biquads).
 // Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 float Notch(float input)
 {
   float output = input;
   {
-    static float z1 = 0, z2 = 0;
-    float x = output - (-1.56858163f * z1) - (0.96424138f * z2);
-    output  = 0.96508099f * x + (-1.56202714f * z1) + (0.96508099f * z2);
-    z2 = z1; z1 = x;
+    static float z1, z2; // filter section state
+    float x = output - -1.58696045*z1 - 0.96505858*z2;
+    output = 0.96588529*x + -1.57986211*z1 + 0.96588529*z2;
+    z2 = z1;
+    z1 = x;
   }
   {
-    static float z1 = 0, z2 = 0;
-    float x = output - (-1.61100358f * z1) - (0.96592171f * z2);
-    output  = 1.00000000f * x + (-1.61854514f * z1) + (1.00000000f * z2);
-    z2 = z1; z1 = x;
+    static float z1, z2; // filter section state
+    float x = output - -1.62761184*z1 - 0.96671306*z2;
+    output = 1.00000000*x + -1.63566226*z1 + 1.00000000*z2;
+    z2 = z1;
+    z1 = x;
   }
   return output;
 }
 
 // Low-Pass Butterworth IIR digital filter, generated using filter_gen.py.
-// Sampling rate: 500.0 Hz, frequency: 45.0 Hz.
+// Sampling rate: 512.0 Hz, frequency: 45.0 Hz.
 // Filter is order 2, implemented as second-order sections (biquads).
 // Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 float EEGFilter(float input)
 {
   float output = input;
   {
-    static float z1 = 0, z2 = 0;
-    float x = output - -1.22465158 * z1 - 0.45044543 * z2;
-    output  = 0.05644846 * x + 0.11289692 * z1 + 0.05644846 * z2;
-    z2 = z1; z1 = x;
+    static float z1, z2; // filter section state
+    float x = output - -1.24200128*z1 - 0.45885207*z2;
+    output = 0.05421270*x + 0.10842539*z1 + 0.05421270*z2;
+    z2 = z1;
+    z1 = x;
   }
   return output;
 }
