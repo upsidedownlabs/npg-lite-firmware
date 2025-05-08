@@ -26,7 +26,7 @@
 #include <IRsend.h>
 
 // Choose your IR LED pin:
-const uint16_t kIrLedPin = 4;
+const uint16_t kIrLedPin = 22;
 #define BOOT_BUTTON  9     // ESP32 BOOT button (active LOW)
 
 int c=0;
@@ -34,7 +34,6 @@ int c=0;
 IRsend irsend(kIrLedPin);
 
 // LG‐AC codes are 28 bits long. Replace these with YOUR captured values:
-//– OFF (you saw 0x4500188 → bit-reversed → 0x88C0051 in LG’s encoding)
 const uint32_t kAcOff = 0x88C0051;
 //– ON  (whatever your “power on” capture reversed to)
 const uint32_t kAcOn  = 0x8800B4F;  
@@ -47,19 +46,25 @@ void setup() {
   Serial.println("Press Boot button to turn AC ON or OFF"); 
 }
 
+static bool lastPressed = false;
+
 void loop() {
-  if(digitalRead(BOOT_BUTTON) == LOW)
-  {
-  if (c%2==0) {
-    Serial.println("→ Sending AC ON");
-    irsend.sendLG(kAcOn, 28);
-    delay(500);
+  bool pressed = digitalRead(BOOT_BUTTON) == LOW;
+  if (pressed && !lastPressed) 
+  {          // LOW edge detected
+    if (c % 2 == 0) 
+    {
+      Serial.println("→ Sending AC ON");
+      irsend.sendLG(kAcOn, 28);
+      delay(250);
+    }
+    else 
+    {
+      Serial.println("→ Sending AC OFF");
+      irsend.sendLG(kAcOff, 28);
+      delay(250);
+    }
+    c=c+1;
   }
-  else {
-    Serial.println("→ Sending AC OFF");
-    irsend.sendLG(kAcOff, 28);
-    delay(500);
-  }
-  c=c+1;
-  }
+  lastPressed = pressed;
 }

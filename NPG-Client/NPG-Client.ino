@@ -119,8 +119,7 @@ bool connectToServer() {
 bool connectCharacteristic(BLERemoteService* pRemoteService, BLERemoteCharacteristic* l_BLERemoteChar) {
   // Obtain a reference to the characteristic in the service of the remote BLE server.
   if (l_BLERemoteChar == nullptr) {
-    Serial.print("Failed to find one of the characteristics");
-    Serial.print(l_BLERemoteChar->getUUID().toString().c_str());
+    Serial.println("Failed to find required characteristic");
     return false;
   }
   Serial.println(" - Found characteristic: " + String(l_BLERemoteChar->getUUID().toString().c_str()));

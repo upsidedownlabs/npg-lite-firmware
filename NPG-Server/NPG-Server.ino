@@ -158,9 +158,10 @@ void loop() {
       // only toggle the LED if the new button state is HIGH
       if (buttonState == HIGH) {
         ledState = !ledState;
-        if(deviceConnected){
-                pCharacteristic_1->setValue(ledState);
-      pCharacteristic_1->notify();
+        if(deviceConnected)
+        {
+          uint8_t ledByte = ledState;
+          pCharacteristic_1->setValue(&ledByte, 1);
         }
       }
     }

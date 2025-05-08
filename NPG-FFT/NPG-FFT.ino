@@ -183,7 +183,7 @@ void processFFT() {
   smoothBandpower(&raw, &smoothedPowers);
   float T = smoothedPowers.total + EPS;  // Total Bandpower
 
-  if(((smoothedPowers.beta/ T)*100)>20.0)w
+  if(((smoothedPowers.beta/ T)*100)>20.0)
   {
     digitalWrite(7, HIGH);
   } else {
