@@ -35,7 +35,7 @@ const int buttonPin = 9;  // the number of the pushbutton pin
 const int ledPin = 7;    // the number of the LED pin
 
 // Variables will change:
-int ledState = HIGH;        // the current state of the output pin
+uint8_t ledState = HIGH;        // the current state of the output pin
 uint32_t buttonState;            // the current reading from the input pin
 int lastButtonState = LOW;  // the previous reading from the input pin
 
@@ -160,8 +160,8 @@ void loop() {
         ledState = !ledState;
         if(deviceConnected)
         {
-          uint8_t ledByte = ledState;
-          pCharacteristic_1->setValue(&ledByte, 1);
+          pCharacteristic_1->setValue(&ledState, 1);
+          pCharacteristic_1->notify();
         }
       }
     }

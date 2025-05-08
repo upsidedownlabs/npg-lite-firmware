@@ -93,9 +93,8 @@ float Notch(float input)
   return output;
 }
 
-// --- Filter Functions ---
-// Band-Stop Butterworth IIR digital filter, generated using filter_gen.py.
-// Sampling rate: 500.0 Hz, frequency: [48.0, 52.0] Hz.
+// Low-Pass Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 500.0 Hz, frequency: 45.0 Hz.
 // Filter is order 2, implemented as second-order sections (biquads).
 // Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 float EEGFilter(float input)
