@@ -21,7 +21,7 @@
 // Thank you for being part of this journey with us!
 
 /*
- This examle is adapted from the client and server code provided by MoThunderz
+ This example is adapted from the client and server code provided by MoThunderz
  Firmware: https://github.com/mo-thunderz/Esp32BlePart2
  YouTube video: https://www.youtube.com/watch?v=s3yoZa6kzus
 */

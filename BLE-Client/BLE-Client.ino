@@ -20,13 +20,15 @@
 // Thank you for being part of this journey with us!
 
 /*
- This examle is adapted from the client and server code provided by MoThunderz
+ This example is adapted from the client and server code provided by MoThunderz
  Firmware: https://github.com/mo-thunderz/Esp32BlePart2
  YouTube video: https://www.youtube.com/watch?v=s3yoZa6kzus
 */
 
 #include "BLEDevice.h"
 //#include "BLEScan.h"
+
+const int ledPin = 7;    // the number of the LED pin
 
 // Define UUIDs:
 static BLEUUID    serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
@@ -59,8 +61,8 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
     // print to Serial
     Serial.print("Characteristic 1 (Notify) from server: ");
     Serial.println(counter );  
-    if(counter == 1) digitalWrite(6, HIGH);
-    else digitalWrite(6, LOW);
+    if(counter == 1) digitalWrite(ledPin, HIGH);
+    else digitalWrite(ledPin, LOW);
   }
 }
 
@@ -154,8 +156,8 @@ void setup() {
   Serial.println("Starting Arduino BLE Client application...");
   BLEDevice::init("");
 
-  pinMode(6, OUTPUT);
-  digitalWrite(6, LOW);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
   // Retrieve a Scanner and set the callback we want to use to be informed when we
   // have detected a new device.  Specify that we want active scanning and start the
   // scan to run for 5 seconds.
