@@ -218,7 +218,7 @@ void toggleSwitch()
   bci_val = (bci_val == 0) ? 1 : 0; // flip state
   pCharacteristic_1->setValue(bci_val);
   pCharacteristic_1->notify();
-  digitalWrite(7, bci_val);
+  digitalWrite(LED_PIN, bci_val);
 }
 
 // -- Set Neopixel LEDs to indicate focus levels
