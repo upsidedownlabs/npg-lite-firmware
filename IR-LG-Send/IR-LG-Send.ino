@@ -44,8 +44,7 @@ void setup() {
   pinMode(BOOT_BUTTON, INPUT_PULLUP);
   Serial.println("\n===== LG-AC: Send Full 28-bit Codes =====");
   IrSender.begin(IR_SEND_PIN); // initialize the IR sender (RMT)
-  Serial.println("Type '1' + ENTER → send ON");
-  Serial.println("Type '0' + ENTER → send OFF");
+  Serial.println("Press BOOT Button to send ON/OFF");
 }
 
 void loop() {
