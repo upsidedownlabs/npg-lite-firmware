@@ -41,7 +41,6 @@ static const uint32_t FULL_OFF = 0x88C0051;
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {}
   pinMode(BOOT_BUTTON, INPUT_PULLUP);
   Serial.println("\n===== LG-AC: Send Full 28-bit Codes =====");
   IrSender.begin(IR_SEND_PIN); // initialize the IR sender (RMT)

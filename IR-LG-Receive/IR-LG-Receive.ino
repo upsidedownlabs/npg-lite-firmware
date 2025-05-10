@@ -45,7 +45,6 @@ uint32_t reverseBits(uint32_t v, uint8_t bitCount) {
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {}
   Serial.println("\n===== LG-AC: Capture Full 28-bit Codes =====");
   IrReceiver.begin(IR_RECV_PIN, DISABLE_LED_FEEDBACK); // start IR receiver
 }
