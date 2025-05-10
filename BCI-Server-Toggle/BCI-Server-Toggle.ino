@@ -301,7 +301,7 @@ void processFFT() {
     {
       startTimer();
     }
-    // 2) already timing → has 4 s elapsed?
+    // 2) already timing → has 1 s elapsed?
     else if ((millis() - timer1Start) >= 1000UL)
     {
       toggleSwitch(); // flip switch
@@ -332,6 +332,8 @@ void setup() {
   // while(!Serial) { delay(1); }
     pinMode(INPUT_PIN, INPUT);
   pinMode(7, OUTPUT);
+
+  pixels.begin();  // Initialize NeoPixel library (REQUIRED)
 
   initFFT();
   pinMode(LED_PIN, OUTPUT);
