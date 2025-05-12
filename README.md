@@ -14,4 +14,5 @@ Neuro PlayGround (NPG) Lite firmware repository.
 | InfraRed (IR) reciever code to identify LG AC remote button commands | [IR-LG-Receive.ino](IR-LG-Receive/IR-LG-Receive.ino) |
 | IR signal send example code to control LG AC to toggle ON/OFF using user button | [IR-LG-Send.ino](IR-LG-Send/IR-LG-Send.ino) |
 | Brain Computer Interface (BCI) to toggle LG AC ON/OFF using EEG band (beta) power | [BCI-IR-Send.ino](BCI-IR-Send/BCI-IR-Send.ino) |
-
+| BLE client that receives notifications from the server and triggers GPIO to control the car | [BLE-BCI-Car.ino](BLE-BCI-Car/BLE-BCI-Car.ino) |
+| BCI remote (server) to drive the BLE car using EEG band (beta) power and EMG (envelope) data | [BLE-BCI-Car-Remote.ino](BLE-BCI-Car-Remote/BLE-BCI-Car-Remote.ino) |
