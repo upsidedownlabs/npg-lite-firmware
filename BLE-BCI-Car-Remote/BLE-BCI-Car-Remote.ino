@@ -125,7 +125,11 @@ typedef struct
 BandpowerResults smoothedPowers = {0};
 
 // ----------------- FILTER CLASSES -----------------
-// NEW: Notch filter for 50Hz noise removal
+// For 50Hz AC noise removal 
+// Band-Stop Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 500.0 Hz, frequency: [48.0, 52.0] Hz.
+// Filter is order 2, implemented as second-order sections (biquads).
+// Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 class NotchFilter
 {
 private:
