@@ -169,7 +169,11 @@ public:
     }
 };
 
-// NEW: High-pass filter for EMG signals
+
+// High-Pass Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 500.0 Hz, frequency: 70.0 Hz.
+// Filter is order 2, implemented as second-order sections (biquads).
+// Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 class EMGHighPassFilter
 {
 private:
