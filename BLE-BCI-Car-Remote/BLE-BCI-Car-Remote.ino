@@ -169,7 +169,6 @@ public:
     }
 };
 
-
 // High-Pass Butterworth IIR digital filter, generated using filter_gen.py.
 // Sampling rate: 500.0 Hz, frequency: 70.0 Hz.
 // Filter is order 2, implemented as second-order sections (biquads).
@@ -202,6 +201,8 @@ public:
         z2 = 0.0;
     }
 };
+
+// Class to calculate EMG Envelope
 class EnvelopeFilter
 {
 private:
