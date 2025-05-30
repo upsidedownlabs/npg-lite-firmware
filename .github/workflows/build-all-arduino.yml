@@ -1,10 +1,10 @@
-name: Build All Arduino Projects for ESP32-C6
+name: Build ESP32-C6 Firmware
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    paths:
+      - '**/*.ino'
+      - 'build_all_esp32c6.sh'
   workflow_dispatch:
 
 jobs:
@@ -12,63 +12,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v3
+    - name: 📦 Checkout
+      uses: actions/checkout@v3
 
-      - name: 🛠️ Install Arduino CLI
-        run: |
-          wget https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz
-          tar -xzf arduino-cli_latest_Linux_64bit.tar.gz
-          chmod +x arduino-cli
-          sudo mv arduino-cli /usr/local/bin/
-          arduino-cli version
+    - name: 🐳 Set up Docker (optional if using Docker container build)
+      run: |
+        sudo apt update
+        sudo apt install -y docker.io
+        sudo systemctl start docker
+        sudo usermod -aG docker $USER
 
-      - name: 📦 Setup Arduino Core for ESP32
-        run: |
-          arduino-cli config init --overwrite
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+    - name: 🔧 Install Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
 
-      - name: 🔧 Compile All .ino Projects for ESP32-C6
-        run: |
-          set -e
-          BOARD_FQBN="esp32:esp32:esp32c6"
-          BIN_DIR="firmware_bins"
-          mkdir -p "$BIN_DIR"
+    - name: 🔧 Set up Arduino core for ESP32-C6
+      run: |
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli config set directories.user "$PWD"
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
+        arduino-cli board listall
 
-          for sketch in $(find . -type f -name "*.ino"); do
-            sketch_dir=$(dirname "$sketch")
-            sketch_name=$(basename "$sketch" .ino)
-            build_path="$BIN_DIR/$sketch_name"
+    - name: 🧹 Make script executable
+      run: chmod +x ./build_all_esp32c6.sh
 
-            echo "🚧 Compiling $sketch_name"
+    - name: 🚀 Build firmware
+      run: ./build_all_esp32c6.sh
 
-            # Auto-install libraries
-            includes=$(grep -hoP '#include\s+[<"]\K[^">]+' "$sketch" | sort -u)
-            for lib in $includes; do
-              if [[ "$lib" == *".h" || "$lib" == *".hpp" ]]; then
-                base_lib=$(basename "$lib" | sed 's/\.[ch]pp\?$//')
-                echo "📦 Installing library: $base_lib"
-                arduino-cli lib install "$base_lib" || true
-              fi
-            done
-
-            arduino-cli compile \
-              --fqbn "$BOARD_FQBN" \
-              --output-dir "$build_path" \
-              --build-path "$build_path" \
-              --warnings all \
-              --verbose \
-              "$sketch_dir"
-
-            echo "✅ Done: $build_path"
-          done
-
-          echo -e "\n🎯 Built Binaries:"
-          find "$BIN_DIR" -name "*.bin"
-
-      - name: 📤 Upload Compiled Binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: esp32c6-binaries
-          path: firmware_bins/**/**/*.bin
+    - name: 📤 Upload firmware binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: firmware_bins
+        path: firmware_bins/
