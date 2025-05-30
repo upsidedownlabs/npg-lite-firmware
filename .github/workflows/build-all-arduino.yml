@@ -32,9 +32,11 @@ jobs:
     - name: 🚀 Build all firmware
       run: ./build_all_esp32c6.sh
 
-    - name: 📤 Upload .bin files to GitHub Release
+    - name: 📤 Upload only main .ino.bin files to GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: firmware_bins/**/*.bin
+        files: |
+          $(find firmware_bins -type f -name '*.ino.bin' ! -size 0)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
