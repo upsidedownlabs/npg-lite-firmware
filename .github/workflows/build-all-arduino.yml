@@ -12,37 +12,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Arduino CLI manually
+      - name: 🛠️ Install Arduino CLI
         run: |
           wget https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz
           tar -xzf arduino-cli_latest_Linux_64bit.tar.gz
+          chmod +x arduino-cli
           sudo mv arduino-cli /usr/local/bin/
           arduino-cli version
 
-      - name: Install ESP32 core
+      - name: 📦 Install ESP32 core
         run: |
-          arduino-cli config init
+          arduino-cli config init --overwrite
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      - name: Compile all .ino projects
+      - name: 🔧 Compile all .ino projects
         run: |
           mkdir -p firmware_bins
 
-          # Find and build each .ino sketch
           for sketch in $(find . -type f -name "*.ino"); do
             sketch_dir=$(dirname "$sketch")
             sketch_name=$(basename "$sketch" .ino)
-            echo "🔧 Compiling $sketch in $sketch_dir"
 
-            arduino-cli compile --fqbn esp32:esp32:esp32 "$sketch_dir" --output-dir "firmware_bins/$sketch_name"
+            echo "🚧 Compiling $sketch_name in $sketch_dir"
+
+            arduino-cli compile \
+              --fqbn esp32:esp32:esp32 \
+              --output-dir "firmware_bins/$sketch_name" \
+              --build-path "firmware_bins/$sketch_name" \
+              --warnings all \
+              --verbose \
+              "$sketch_dir"
           done
 
-      - name: Upload all .bin files
+      - name: 📤 Upload all .bin files
         uses: actions/upload-artifact@v4
         with:
           name: all-esp32-binaries
-          path: firmware_bins/**/*.bin
+          path: firmware_bins/**/**/*.bin
