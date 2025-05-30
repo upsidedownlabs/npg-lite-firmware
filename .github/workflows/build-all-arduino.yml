@@ -1,0 +1,45 @@
+name: Build All Arduino Projects for ESP32
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+        with:
+          version: latest
+
+      - name: Install ESP32 Core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Compile all .ino projects
+        run: |
+          mkdir -p firmware_bins
+
+          # Loop over each .ino file in subfolders
+          for sketch in $(find . -type f -name "*.ino"); do
+            sketch_dir=$(dirname "$sketch")
+            sketch_name=$(basename "$sketch" .ino)
+            echo "🔧 Compiling $sketch in $sketch_dir"
+
+            arduino-cli compile --fqbn esp32:esp32:esp32 "$sketch_dir" --output-dir "firmware_bins/$sketch_name"
+          done
+
+      - name: Upload all .bin files
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-esp32-binaries
+          path: firmware_bins/**/*.bin
