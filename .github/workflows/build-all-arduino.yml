@@ -15,14 +15,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Arduino CLI
-        uses: arduino/setup-arduino-cli@v1
-        with:
-          version: 0.35.2
-      
-
-      - name: Install ESP32 Core
+      - name: Install Arduino CLI manually
         run: |
+          wget https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz
+          tar -xzf arduino-cli_latest_Linux_64bit.tar.gz
+          sudo mv arduino-cli /usr/local/bin/
+          arduino-cli version
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
@@ -30,7 +32,7 @@ jobs:
         run: |
           mkdir -p firmware_bins
 
-          # Loop over each .ino file in subfolders
+          # Find and build each .ino sketch
           for sketch in $(find . -type f -name "*.ino"); do
             sketch_dir=$(dirname "$sketch")
             sketch_name=$(basename "$sketch" .ino)
