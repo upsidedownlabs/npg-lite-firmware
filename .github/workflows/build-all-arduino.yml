@@ -1,4 +1,4 @@
-name: Build All Arduino Projects for ESP32
+name: Build All Arduino Projects for ESP32-C6
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v3
 
       - name: 🛠️ Install Arduino CLI
@@ -23,33 +23,52 @@ jobs:
           sudo mv arduino-cli /usr/local/bin/
           arduino-cli version
 
-      - name: 📦 Install ESP32 core
+      - name: 📦 Setup Arduino Core for ESP32
         run: |
           arduino-cli config init --overwrite
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      - name: 🔧 Compile all .ino projects
+      - name: 🔧 Compile All .ino Projects for ESP32-C6
         run: |
-          mkdir -p firmware_bins
+          set -e
+          BOARD_FQBN="esp32:esp32:esp32c6"
+          BIN_DIR="firmware_bins"
+          mkdir -p "$BIN_DIR"
 
           for sketch in $(find . -type f -name "*.ino"); do
             sketch_dir=$(dirname "$sketch")
             sketch_name=$(basename "$sketch" .ino)
+            build_path="$BIN_DIR/$sketch_name"
 
-            echo "🚧 Compiling $sketch_name in $sketch_dir"
+            echo "🚧 Compiling $sketch_name"
+
+            # Auto-install libraries
+            includes=$(grep -hoP '#include\s+[<"]\K[^">]+' "$sketch" | sort -u)
+            for lib in $includes; do
+              if [[ "$lib" == *".h" || "$lib" == *".hpp" ]]; then
+                base_lib=$(basename "$lib" | sed 's/\.[ch]pp\?$//')
+                echo "📦 Installing library: $base_lib"
+                arduino-cli lib install "$base_lib" || true
+              fi
+            done
 
             arduino-cli compile \
-              --fqbn esp32:esp32:esp32 \
-              --output-dir "firmware_bins/$sketch_name" \
-              --build-path "firmware_bins/$sketch_name" \
+              --fqbn "$BOARD_FQBN" \
+              --output-dir "$build_path" \
+              --build-path "$build_path" \
               --warnings all \
               --verbose \
               "$sketch_dir"
+
+            echo "✅ Done: $build_path"
           done
 
-      - name: 📤 Upload all .bin files
+          echo -e "\n🎯 Built Binaries:"
+          find "$BIN_DIR" -name "*.bin"
+
+      - name: 📤 Upload Compiled Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: all-esp32-binaries
+          name: esp32c6-binaries
           path: firmware_bins/**/**/*.bin
