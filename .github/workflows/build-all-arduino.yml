@@ -1,26 +1,17 @@
-name: Build All Arduino Projects for ESP32-C6
+name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📦 Checkout
+    - name: 📦 Checkout code
       uses: actions/checkout@v3
-
-    - name: 🐳 Set up Docker (optional if using Docker container build)
-      run: |
-        sudo apt update
-        sudo apt install -y docker.io
-        sudo systemctl start docker
-        sudo usermod -aG docker $USER
 
     - name: 🔧 Install Arduino CLI
       run: |
@@ -34,16 +25,16 @@ jobs:
         arduino-cli config set directories.user "$PWD"
         arduino-cli core update-index
         arduino-cli core install esp32:esp32
-        arduino-cli board listall
 
-    - name: 🧹 Make script executable
+    - name: 🧹 Make build script executable
       run: chmod +x ./build_all_esp32c6.sh
 
-    - name: 🚀 Build firmware
+    - name: 🚀 Build all firmware
       run: ./build_all_esp32c6.sh
 
-    - name: 📤 Upload firmware binaries
-      uses: actions/upload-artifact@v3
+    - name: 📤 Upload .bin files to GitHub Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: firmware_bins
-        path: firmware_bins/
+        files: firmware_bins/**/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
