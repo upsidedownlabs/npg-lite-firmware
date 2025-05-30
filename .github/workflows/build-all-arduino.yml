@@ -35,16 +35,15 @@ jobs:
     - name: 🐞 Show .ino.bin files
       run: echo "${{ steps.find_bins.outputs.BIN_FILES }}"
     
-    - name: 📦 Find all main .ino.bin files
-      id: find_bins
+    - name: 📦 Find all files in firmware_bins folder
+      id: find_all_files
       run: |
-        BIN_FILES=$(find firmware_bins -type f -name '*.ino.bin' ! -size 0 | paste -sd ' ' -)
-        echo "BIN_FILES=$BIN_FILES" >> $GITHUB_OUTPUT
-    
-    - name: 📤 Upload only main .ino.bin files to GitHub Release
+        ALL_FILES=$(find firmware_bins -type f | paste -sd ' ' -)
+        echo "ALL_FILES=$ALL_FILES" >> $GITHUB_OUTPUT
+
+    - name: 📤 Upload all files to GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ${{ steps.find_bins.outputs.BIN_FILES }}
+        files: ${{ steps.find_all_files.outputs.ALL_FILES }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
