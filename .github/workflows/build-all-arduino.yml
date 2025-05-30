@@ -32,18 +32,22 @@ jobs:
     - name: 🚀 Build all firmware
       run: ./build_all_esp32c6.sh
 
-    - name: Find firmware .bin files only
+    - name: Find firmware .bin files
       id: find_bins
       run: |
-        BIN_FILES=$(find firmware_bins -type f -name '*.bin' | paste -sd ' ' -)
-        echo "BIN_FILES=$BIN_FILES" >> $GITHUB_OUTPUT
-    
-    - name: 🐞 Show .ino.bin files
-      run: echo "${{ steps.find_bins.outputs.BIN_FILES }}"
+        # Create a list of all .bin files with their full paths
+        BIN_FILES=$(find firmware_bins -type f -name '*.bin' | awk '{printf "%s ", $0}')
+        # Store the list in GitHub outputs
+        echo "BIN_FILES=${BIN_FILES%?}" >> $GITHUB_OUTPUT
+        # Print for debugging
+        echo "Found bin files:"
+        echo "$BIN_FILES"
+        echo "Full paths:"
+        find firmware_bins -type f -name '*.bin' -exec ls -la {} \;
 
     - name: Upload firmware binaries
       uses: softprops/action-gh-release@v1
       with:
-          files: ${{ steps.find_bins.outputs.BIN_FILES }}
+        files: ${{ steps.find_bins.outputs.BIN_FILES }}
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
