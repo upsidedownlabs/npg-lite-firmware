@@ -1,10 +1,10 @@
-name: Build ESP32-C6 Firmware
+name: Build All Arduino Projects for ESP32-C6
 
 on:
   push:
-    paths:
-      - '**/*.ino'
-      - 'build_all_esp32c6.sh'
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
