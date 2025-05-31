@@ -40,7 +40,8 @@ jobs:
     - name: 🔧 Setup Arduino CLI
       run: |
         curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-        sudo mv bin/arudino-cli /usr/local/bin/
+        echo "Adding arduino-cli to PATH"
+        echo "$PWD/bin" >> $GITHUB_PATH
         arduino-cli version
         arduino-cli config init
         arduino-cli config set library.enable_unsafe_install true
