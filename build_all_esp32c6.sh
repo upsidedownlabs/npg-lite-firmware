@@ -1,54 +1,158 @@
 #!/bin/bash
 
-# 🧰 CONFIG
+# Configuration
 BOARD_FQBN="esp32:esp32:esp32c6"
-BIN_DIR="firmware_bins"
-LIB_DIR="$PWD/libraries"
+OUTPUT_DIR="compiled_binaries"
+LIBRARY_DIR="$HOME/Arduino/libraries"
 
-# 🧹 Clean previous build
-rm -rf "$BIN_DIR"
-mkdir -p "$BIN_DIR"
+# Install dependencies
+echo "➡️ Installing dependencies..."
+arduino-cli core update-index
+arduino-cli core install esp32:esp32@3.2.0
+arduino-cli lib install "IRremote"
+arduino-cli lib install "BLE"
 
-# 📦 Ensure libraries dir exists
-mkdir -p "$LIB_DIR"
+# Create fresh output directory
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
-# 📌 Set library directory for Arduino CLI
-arduino-cli config set library.enable_unsafe_install true
-arduino-cli config set directories.user "$PWD"
+# Compilation function with error handling
+compile_project() {
+  local sketch_dir=$1
+  local sketch_name=$(basename "$sketch_dir")
+  local output_path="$OUTPUT_DIR/$sketch_name"
 
-# 🔄 Compile each .ino file
-for sketch in $(find . -type f -name "*.ino"); do
-  sketch_dir=$(dirname "$sketch")
-  sketch_name=$(basename "$sketch" .ino)
-  build_path="$BIN_DIR/$sketch_name"
+  mkdir -p "$output_path"
 
-  echo "🚧 Compiling $sketch_name"
+  echo -e "\n🛠️  Compiling: $sketch_name"
 
-  # 📚 Auto-install libraries by scanning includes
-  includes=$(grep -hoP '#include\s+[<"]\K[^">]+' "$sketch" | sort -u)
+  # Apply fixes for known issues
+  sed -i 's/BandpowerResults r = { 0 };/BandpowerResults r = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
+  sed -i 's/BandpowerResults smoothedPowers = { 0 };/BandpowerResults smoothedPowers = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
+  sed -i 's/^.*NOTCH$//g' "$sketch_dir/$sketch_name.ino"
 
-  for lib in $includes; do
-    # Only try to install libraries, skip standard headers
-    if [[ "$lib" == *".h" || "$lib" == *".hpp" ]]; then
-      base_lib=$(basename "$lib" .h | sed 's/\.hpp$//')
-      echo "📦 Checking library: $base_lib"
-      arduino-cli lib install "$base_lib" || true
-    fi
-  done
-
-  # 🧱 Compile
-  arduino-cli compile \
+  if arduino-cli compile \
     --fqbn "$BOARD_FQBN" \
-    --libraries "$LIB_DIR" \
-    --output-dir "$build_path" \
-    --build-path "$build_path" \
-    --warnings all \
-    --verbose \
-    "$sketch_dir"
+    --output-dir "$output_path" \
+    --libraries "$LIBRARY_DIR" \
+    --export-binaries \
+    --warnings default \
+    "$sketch_dir" > "$output_path/compile.log" 2>&1; then
 
-  echo "✅ Compiled: $build_path"
+    echo "✅ Success"
+    echo "   Binary: $output_path/$sketch_name.ino.bin"
+  else
+    echo "❌ Failed"
+    echo "   See $output_path/compile.log"
+
+    # Attempt basic fixes for common errors
+    if grep -q "'sum' was not declared" "$output_path/compile.log"; then
+      echo "   ⚠️ Applying fix for undeclared 'sum' variable"
+      sed -i '/double EnvelopeFilter::getEnvelope(double)/a double sum = 0;' "$sketch_dir/$sketch_name.ino"
+
+      # Retry compilation after fix
+      if arduino-cli compile \
+        --fqbn "$BOARD_FQBN" \
+        --output-dir "$output_path" \
+        --libraries "$LIBRARY_DIR" \
+        --export-binaries \
+        "$sketch_dir" >> "$output_path/compile.log" 2>&1; then
+
+        echo "   🔄 Retry successful after fixes!"
+      else
+        echo "   ❌ Still failing after fixes"
+      fi
+    fi
+  fi
+}
+
+# Process all projects
+find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
+  if [ -f "$sketch_dir/$(basename "$sketch_dir").ino" ]; then
+    compile_project "$sketch_dir"
+  else
+    echo "⚠️  Skipping non-Arduino folder: $(basename "$sketch_dir")"
+  fi
 done
 
-# ✅ Show built .bin files
-echo -e "\n🎉 Built firmware:"
-find "$BIN_DIR" -name "*.bin"
+echo -e "\n📊 Compilation summary:"
+find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
+#!/bin/bash
+
+# Configuration
+BOARD_FQBN="esp32:esp32:esp32c6"
+OUTPUT_DIR="compiled_binaries"
+LIBRARY_DIR="$HOME/Arduino/libraries"
+
+# Install dependencies
+echo "➡️ Installing dependencies..."
+arduino-cli core update-index
+arduino-cli core install esp32:esp32@3.2.0
+arduino-cli lib install "IRremote"
+arduino-cli lib install "BLE"
+
+# Create fresh output directory
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
+
+# Compilation function with error handling
+compile_project() {
+  local sketch_dir=$1
+  local sketch_name=$(basename "$sketch_dir")
+  local output_path="$OUTPUT_DIR/$sketch_name"
+
+  mkdir -p "$output_path"
+
+  echo -e "\n🛠️  Compiling: $sketch_name"
+
+  # Apply fixes for known issues
+  sed -i 's/BandpowerResults r = { 0 };/BandpowerResults r = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
+  sed -i 's/BandpowerResults smoothedPowers = { 0 };/BandpowerResults smoothedPowers = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
+  sed -i 's/^.*NOTCH$//g' "$sketch_dir/$sketch_name.ino"
+
+  if arduino-cli compile \
+    --fqbn "$BOARD_FQBN" \
+    --output-dir "$output_path" \
+    --libraries "$LIBRARY_DIR" \
+    --export-binaries \
+    --warnings default \
+    "$sketch_dir" > "$output_path/compile.log" 2>&1; then
+
+    echo "✅ Success"
+    echo "   Binary: $output_path/$sketch_name.ino.bin"
+  else
+    echo "❌ Failed"
+    echo "   See $output_path/compile.log"
+
+    # Attempt basic fixes for common errors
+    if grep -q "'sum' was not declared" "$output_path/compile.log"; then
+      echo "   ⚠️ Applying fix for undeclared 'sum' variable"
+      sed -i '/double EnvelopeFilter::getEnvelope(double)/a double sum = 0;' "$sketch_dir/$sketch_name.ino"
+
+      # Retry compilation after fix
+      if arduino-cli compile \
+        --fqbn "$BOARD_FQBN" \
+        --output-dir "$output_path" \
+        --libraries "$LIBRARY_DIR" \
+        --export-binaries \
+        "$sketch_dir" >> "$output_path/compile.log" 2>&1; then
+
+        echo "   🔄 Retry successful after fixes!"
+      else
+        echo "   ❌ Still failing after fixes"
+      fi
+    fi
+  fi
+}
+
+# Process all projects
+find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
+  if [ -f "$sketch_dir/$(basename "$sketch_dir").ino" ]; then
+    compile_project "$sketch_dir"
+  else
+    echo "⚠️  Skipping non-Arduino folder: $(basename "$sketch_dir")"
+  fi
+done
+
+echo -e "\n📊 Compilation summary:"
+find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
