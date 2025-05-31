@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Increased timeout for large downloads
 
     steps:
     - name: 📦 Checkout code
@@ -26,7 +27,6 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp32:esp32@3.2.0
         arduino-cli lib install "IRremote"
-        arduino-cli lib install "BLE"
 
     - name: 🏗️ Create build directory
       run: mkdir -p compiled_binaries
