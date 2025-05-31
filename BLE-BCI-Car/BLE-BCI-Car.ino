@@ -15,7 +15,8 @@
    BLE connectivity adapted from the ESP32 BLE Server example by Random Nerd Tutorials:
    https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/.
 
-   Copyright (c) 2024 - 2025 Krishnanshu Mittal - karan4g79@gmail.com
+   Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
+   Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
    Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
    Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
 

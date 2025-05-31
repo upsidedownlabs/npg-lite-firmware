@@ -12,7 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
-// Copyright (c) 2025 Upside Down Labs - contact@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
 
 // At Upside Down Labs, we create open-source DIY neuroscience hardware and software.
 // Our mission is to make neuroscience affordable and accessible for everyone.

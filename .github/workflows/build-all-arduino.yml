@@ -5,7 +5,7 @@ on:
     branches:
       - main  # or your preferred branch name
     tags:
-      - 'v*'
+      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
 
 jobs:
   create-tag:
@@ -17,12 +17,13 @@ jobs:
         with:
           fetch-depth: 0  # Needed to fetch all history for tagging
 
-      - name: Create tag v0.1.0
+      - name: Create date-based tag
         run: |
+          current_date=$(date +'%d.%m.%Y')
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git tag -a v0.1.0 -m "Release version 0.1.0"
-          git push origin v0.1.0
+          git tag -a "$current_date" -m "Release $current_date"
+          git push origin "$current_date"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -35,7 +36,13 @@ jobs:
     - name: 📦 Checkout code
       uses: actions/checkout@v4
       with:
-        ref: v0.1.0  # Checkout the tagged version
+        ref: ${{ needs.create-tag.outputs.tag_name }}
+
+    - name: Get tag name
+      id: get-tag
+      run: |
+        current_date=$(date +'%d.%m.%Y')
+        echo "tag_name=$current_date" >> $GITHUB_OUTPUT
 
     - name: 🔧 Setup Arduino CLI
       run: |
@@ -76,9 +83,9 @@ jobs:
     - name: 🏷️ Create release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v0.1.0
-        name: Release v0.1.0
-        body: Automatic release of firmware version 0.1.0
+        tag_name: ${{ steps.get-tag.outputs.tag_name }}
+        name: Release ${{ steps.get-tag.outputs.tag_name }}
+        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
         files: artifacts/*.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
