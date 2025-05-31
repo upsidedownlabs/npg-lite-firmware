@@ -10,6 +10,7 @@ echo "➡️ Installing dependencies..."
 arduino-cli core update-index
 arduino-cli core install esp32:esp32@3.2.0
 arduino-cli lib install "IRremote"
+arduino-cli lib install "BLE"
 
 # Create fresh output directory
 rm -rf "$OUTPUT_DIR"
@@ -82,13 +83,6 @@ find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
 BOARD_FQBN="esp32:esp32:esp32c6"
 OUTPUT_DIR="compiled_binaries"
 LIBRARY_DIR="$HOME/Arduino/libraries"
-
-# Install dependencies
-echo "➡️ Installing dependencies..."
-arduino-cli core update-index
-arduino-cli core install esp32:esp32@3.2.0
-arduino-cli lib install "IRremote"
-arduino-cli lib install "BLE"
 
 # Create fresh output directory
 rm -rf "$OUTPUT_DIR"
