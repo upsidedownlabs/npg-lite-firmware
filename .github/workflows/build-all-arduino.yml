@@ -2,17 +2,35 @@ name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
+    branches:
+      - main  # or your preferred branch name
     tags:
       - 'v*'
 
 jobs:
+  create-tag:
+    if: github.ref == 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create tag v0.1.0
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git tag -a v0.1.0 -m "Release version 0.1.0"
+          git push origin v0.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
+    needs: create-tag
     runs-on: ubuntu-latest
     timeout-minutes: 30  # Increased timeout for large downloads
 
     steps:
     - name: 📦 Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: v0.1.0  # Checkout the tagged version
 
     - name: 🔧 Setup Arduino CLI
       run: |
@@ -37,8 +55,9 @@ jobs:
     - name: 📦 Package artifacts
       run: |
         mkdir -p artifacts
-        find compiled_binaries -name "*.bin" -exec cp {} artifacts \;
-        echo "=== Artifacts ==="
+        # Only copy .ino.bin files (exclude .merged.bin, .partitions.bin, .bootloader.bin)
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
         ls -lh artifacts
         echo "=== Failed Build Logs ==="
         find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
@@ -50,9 +69,11 @@ jobs:
         path: artifacts/*.bin
 
     - name: 🏷️ Create release
-      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: v0.1.0
+        name: Release v0.1.0
+        body: Automatic release of firmware version 0.1.0
         files: artifacts/*.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
