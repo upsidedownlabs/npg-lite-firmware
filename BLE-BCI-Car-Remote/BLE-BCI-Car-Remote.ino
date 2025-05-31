@@ -12,7 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
-// Copyright (c) 2025 Upside Down Labs - contact@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
 
 // At Upside Down Labs, we create open-source DIY neuroscience hardware and software.
 // Our mission is to make neuroscience affordable and accessible for everyone.
@@ -31,7 +33,7 @@
 #include <BLE2902.h>
 #include <Arduino.h>
 #include "esp_dsp.h"
-
+#include <vector>
 // constants won't change. They're used here to set pin numbers:
 const int buttonPin = 9;  // the number of the pushbutton pin
 const int ledPin = 7;     // the number of the LED pin
@@ -119,7 +121,7 @@ typedef struct
   float delta, theta, alpha, beta, gamma, total;
 } BandpowerResults;
 
-BandpowerResults smoothedPowers = { 0 };
+BandpowerResults smoothedPowers = {0,0,0,0,0,0};
 
 // ----------------- NOTCH FILTER CLASSES -----------------
 // For 50Hz AC noise removal
@@ -196,7 +198,7 @@ public:
 // Class to calculate EMG Envelope
 class EnvelopeFilter {
 private:
-  std::vector<double> circularBuffer;NOTCH
+  std::vector<double> circularBuffer;
   double sum = 0.0;
   int dataIndex = 0;
   const int bufferSize;
@@ -235,7 +237,7 @@ EnvelopeFilter Envelopefilter2(16);  // Envelope detector for right EMG
 
 // ----------------- BANDPOWER & SMOOTHING -----------------
 BandpowerResults calculateBandpower(float *ps, float binRes, int halfSize) {
-  BandpowerResults r = { 0 };
+  BandpowerResults r = {0,0,0,0,0,0};
   for (int i = 1; i < halfSize; i++) {
     float freq = i * binRes;
     float p = ps[i];
