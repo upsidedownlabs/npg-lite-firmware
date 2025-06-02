@@ -8,7 +8,9 @@ on:
       - '*.*.*'   # Matches version tags without prefix like 1.0.0
 
 jobs:
+  # This job only runs for tag pushes
   check-release:
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     outputs:
       release_exists: ${{ steps.check.outputs.exists }}
@@ -50,9 +52,8 @@ jobs:
           echo "Tag name: ${{ steps.extract-tag.outputs.tag_name }}"
           echo "Release exists: ${{ steps.check.outputs.exists }}"
 
+  # This job runs for both branches and tags
   build:
-    needs: check-release
-    if: ${{ needs.check-release.outputs.release_exists == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -97,6 +98,18 @@ jobs:
           name: firmware-binaries
           path: artifacts/*.bin
           
+  # This job only runs for tag pushes when no release exists yet
+  create-release:
+    needs: [check-release, build]
+    if: ${{ startsWith(github.ref, 'refs/tags/') && needs.check-release.outputs.release_exists == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-binaries
+          path: artifacts
+
       - name: 🏷️ Create release
         uses: softprops/action-gh-release@v2
         with:
