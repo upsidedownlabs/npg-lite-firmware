@@ -74,7 +74,7 @@ jobs:
           arduino-cli lib install "IRremote"
           arduino-cli lib install "Adafruit NeoPixel"
 
-      - name: 🏗️ Create build directory
+      - name: � Create build directory
         run: mkdir -p compiled_binaries
 
       - name: 🚀 Build all firmware
@@ -106,4 +106,4 @@ jobs:
           body: Automatic release of firmware version ${{ needs.check-release.outputs.tag_name }}
           files: artifacts/*.bin
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
