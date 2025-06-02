@@ -1,29 +1,30 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
+
+// At Upside Down Labs, we create open-source DIY neuroscience hardware and software.
+// Our mission is to make neuroscience affordable and accessible for everyone.
+// By supporting us with your purchase, you help spread innovation and open science.
+// Thank you for being part of this journey with us!
+
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-   BLE connectivity adapted from the ESP32 BLE Server example by Random Nerd Tutorials:
-   https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/.
-
-   Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
-   Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
-   Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
-   Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
-
-   At Upside Down Labs, we create open‐source DIY neuroscience hardware and software.
-   Our mission is to make neuroscience affordable and accessible for everyone.
-   By supporting us with your purchase, you help spread innovation and open science.
-   Thank you for being part of this journey with us!
+ This example is adapted from the client and server code provided by MoThunderz
+ Firmware: https://github.com/mo-thunderz/Esp32BlePart2
+ YouTube video: https://www.youtube.com/watch?v=s3yoZa6kzus
 */
 
 // ----- Existing Includes -----

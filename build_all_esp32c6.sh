@@ -25,12 +25,6 @@ compile_project() {
   mkdir -p "$output_path"
 
   echo -e "\n🛠️  Compiling: $sketch_name"
-
-  # Apply fixes for known issues
-  sed -i 's/BandpowerResults r = { 0 };/BandpowerResults r = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
-  sed -i 's/BandpowerResults smoothedPowers = { 0 };/BandpowerResults smoothedPowers = {0,0,0,0,0,0};/g' "$sketch_dir/$sketch_name.ino"
-  sed -i 's/^.*NOTCH$//g' "$sketch_dir/$sketch_name.ino"
-
   if arduino-cli compile \
     --fqbn "$BOARD_FQBN" \
     --output-dir "$output_path" \
