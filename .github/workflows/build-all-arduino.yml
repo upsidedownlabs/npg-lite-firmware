@@ -14,32 +14,21 @@ jobs:
     - name: 📦 Checkout code
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref_name }}  # Checkout the pushed tag
+        ref: ${{ github.ref_name }}
 
     - name: 🔍 Check if release exists
       id: check-release
-      uses: actions/github-script@v7
-      with:
-        script: |
-          try {
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: '${{ github.ref_name }}'
-            });
-            console.log(`Release exists: ${release.data.html_url}`);
-            return true;
-          } catch (error) {
-            if (error.status === 404) {
-              console.log('No release found for tag');
-              return false;
-            }
-            throw error;
-          }
-        result-encoding: string
+      run: |
+        if gh release view "${{ github.ref_name }}" 2>/dev/null; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 🔧 Setup Arduino CLI
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       run: |
         curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
         sudo mv bin/arduino-cli /usr/local/bin/
@@ -52,17 +41,17 @@ jobs:
         arduino-cli lib install "Adafruit NeoPixel"
 
     - name: 🏗️ Create build directory
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       run: mkdir -p compiled_binaries
 
     - name: 🚀 Build all firmware
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       run: |
         chmod +x ./build_all_esp32c6.sh
-        ./build_all_esp32c6.sh || true  # Continue even if some fail
+        ./build_all_esp32c6.sh || true
 
     - name: 📦 Package artifacts
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       run: |
         mkdir -p artifacts
         find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
@@ -72,14 +61,14 @@ jobs:
         find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
 
     - name: 📤 Upload artifacts
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: firmware-binaries
         path: artifacts/*.bin
 
     - name: 🏷️ Create release
-      if: ${{ steps.check-release.outputs.result == 'false' }}
+      if: steps.check-release.outputs.exists == 'false'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
@@ -88,7 +77,3 @@ jobs:
         files: artifacts/*.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: ⏩ Skip existing release
-      if: ${{ steps.check-release.outputs.result == 'true' }}
-      run: echo "Skipping build/release: Release already exists for ${{ github.ref_name }}"
