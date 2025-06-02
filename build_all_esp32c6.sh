@@ -52,7 +52,6 @@ done
 
 echo -e "\n📊 Compilation summary:"
 find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
-#!/bin/bash
 
 # Process all projects
 find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
