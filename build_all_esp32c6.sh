@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-BOARD_FQBN="esp32:esp32:esp32c3"
+BOARD_FQBN="esp32:esp32:esp32c6"
 OUTPUT_DIR="compiled_binaries"
 LIBRARY_DIR="$HOME/Arduino/libraries"
 
