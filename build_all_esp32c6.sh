@@ -4,42 +4,65 @@
 BOARD_FQBN="esp32:esp32:esp32c6"
 OUTPUT_DIR="compiled_binaries"
 LIBRARY_DIR="$HOME/Arduino/libraries"
-SKETCH_NAME="your_sketch_name"  # Change this to your specific sketch name
 
-# Install dependencies (only if needed)
-echo "➡️ Checking dependencies..."
+# Install dependencies
+echo "➡️ Installing dependencies..."
 arduino-cli core update-index
 arduino-cli core install esp32:esp32@3.2.0
 arduino-cli lib install "IRremote"
 arduino-cli lib install "BLE"
 
 # Create fresh output directory
-echo "➡️ Preparing output directory..."
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-# Verify sketch exists
-if [ ! -f "$SKETCH_NAME/$SKETCH_NAME.ino" ]; then
-  echo "❌ Error: Sketch $SKETCH_NAME not found!"
-  exit 1
-fi
+# Compilation function with error handling
+compile_project() {
+  local sketch_dir=$1
+  local sketch_name=$(basename "$sketch_dir")
+  local output_path="$OUTPUT_DIR/$sketch_name"
 
-echo -e "\n🛠️  Compiling: $SKETCH_NAME"
-if arduino-cli compile \
-  --fqbn "$BOARD_FQBN" \
-  --output-dir "$OUTPUT_DIR" \
-  --libraries "$LIBRARY_DIR" \
-  --export-binaries \
-  --warnings all \
-  "$SKETCH_NAME" > "$OUTPUT_DIR/compile.log" 2>&1; then
+  mkdir -p "$output_path"
 
-  echo "✅ Success"
-  echo "   Binary: $OUTPUT_DIR/$SKETCH_NAME.ino.bin"
-else
-  echo "❌ Compilation failed"
-  echo "   See $OUTPUT_DIR/compile.log for details"
-  exit 1
-fi
+  echo -e "\n🛠️  Compiling: $sketch_name"
+  if arduino-cli compile \
+    --fqbn "$BOARD_FQBN" \
+    --output-dir "$output_path" \
+    --libraries "$LIBRARY_DIR" \
+    --export-binaries \
+    --warnings default \
+    "$sketch_dir" > "$output_path/compile.log" 2>&1; then
 
-echo -e "\n📊 Build complete"
-ls -lh "$OUTPUT_DIR/$SKETCH_NAME.ino.bin"
+    echo "✅ Success"
+    echo "   Binary: $output_path/$sketch_name.ino.bin"
+  else
+    echo "❌ Failed"
+    echo "   See $output_path/compile.log"
+
+  fi
+}
+
+# Process all projects
+find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
+  if [ -f "$sketch_dir/$(basename "$sketch_dir").ino" ]; then
+    compile_project "$sketch_dir"
+  else
+    echo "⚠️  Skipping non-Arduino folder: $(basename "$sketch_dir")"
+  fi
+done
+
+echo -e "\n📊 Compilation summary:"
+find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
+#!/bin/bash
+
+# Process all projects
+find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
+  if [ -f "$sketch_dir/$(basename "$sketch_dir").ino" ]; then
+    compile_project "$sketch_dir"
+  else
+    echo "⚠️  Skipping non-Arduino folder: $(basename "$sketch_dir")"
+  fi
+done
+
+echo -e "\n📊 Compilation summary:"
+find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
