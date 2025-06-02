@@ -2,36 +2,11 @@ name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
-    branches:
-      - main  # or your preferred branch name
     tags:
       - '*.*.*'  # Matches date format tags like dd.mm.yyyy
 
 jobs:
-  create-tag:
-    if: github.ref == 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    outputs:
-      tag_name: ${{ steps.create-tag.outputs.tag_name }}
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Needed to fetch all history for tagging
-
-      - name: Create date-based tag
-        id: create-tag
-        run: |
-          current_date=$(date +'%d.%m.%Y')
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git tag -a "$current_date" -m "Release $current_date"
-          git push origin "$current_date"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build:
-    needs: create-tag
     runs-on: ubuntu-latest
     timeout-minutes: 30  # Increased timeout for large downloads
 
@@ -39,13 +14,13 @@ jobs:
     - name: 📦 Checkout code
       uses: actions/checkout@v4
       with:
-        ref: ${{ needs.create-tag.outputs.tag_name }}
+        ref: ${{ github.ref }}
 
     - name: Get tag name
       id: get-tag
       run: |
-        current_date=$(date +'%d.%m.%Y')
-        echo "tag_name=$current_date" >> $GITHUB_OUTPUT
+        tag_name=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
 
     - name: 🔧 Setup Arduino CLI
       run: |
@@ -62,7 +37,279 @@ jobs:
     - name: 🏗️ Create build directory
       run: mkdir -p compiled_binaries
 
-    - name: 🚀 Build all firmware
+    - name: � Build all firmware
+      run: |
+        chmod +x ./build_all_esp32c6.sh
+        ./build_all_esp32c6.sh || true  # Continue even if some fail
+
+    - name: 📦 Package artifacts
+      run: |
+        mkdir -p artifacts
+        # Only copy .ino.bin files (exclude .merged.bin, .partitions.bin, .bootloader.bin)
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
+        ls -lh artifacts
+        echo "=== Failed Build Logs ==="
+        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+
+    - name: 📤 Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-binaries
+        path: artifacts/*.bin
+
+    - name: 🏷️ Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get-tag.outputs.tag_name }}
+        name: Release ${{ steps.get-tag.outputs.tag_name }}
+        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
+        files: artifacts/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}name: Build & Release Firmware for ESP32-C6
+
+on:
+  push:
+    tags:
+      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Increased timeout for large downloads
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Get tag name
+      id: get-tag
+      run: |
+        tag_name=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+    - name: 🔧 Setup Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
+        arduino-cli version
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.2.0
+        arduino-cli lib install "IRremote"
+        arduino-cli lib install "Adafruit NeoPixel"
+
+    - name: 🏗️ Create build directory
+      run: mkdir -p compiled_binaries
+
+    - name: � Build all firmware
+      run: |
+        chmod +x ./build_all_esp32c6.sh
+        ./build_all_esp32c6.sh || true  # Continue even if some fail
+
+    - name: 📦 Package artifacts
+      run: |
+        mkdir -p artifacts
+        # Only copy .ino.bin files (exclude .merged.bin, .partitions.bin, .bootloader.bin)
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
+        ls -lh artifacts
+        echo "=== Failed Build Logs ==="
+        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+
+    - name: 📤 Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-binaries
+        path: artifacts/*.bin
+
+    - name: 🏷️ Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get-tag.outputs.tag_name }}
+        name: Release ${{ steps.get-tag.outputs.tag_name }}
+        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
+        files: artifacts/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}name: Build & Release Firmware for ESP32-C6
+
+on:
+  push:
+    tags:
+      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Increased timeout for large downloads
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Get tag name
+      id: get-tag
+      run: |
+        tag_name=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+    - name: 🔧 Setup Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
+        arduino-cli version
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.2.0
+        arduino-cli lib install "IRremote"
+        arduino-cli lib install "Adafruit NeoPixel"
+
+    - name: 🏗️ Create build directory
+      run: mkdir -p compiled_binaries
+
+    - name: � Build all firmware
+      run: |
+        chmod +x ./build_all_esp32c6.sh
+        ./build_all_esp32c6.sh || true  # Continue even if some fail
+
+    - name: 📦 Package artifacts
+      run: |
+        mkdir -p artifacts
+        # Only copy .ino.bin files (exclude .merged.bin, .partitions.bin, .bootloader.bin)
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
+        ls -lh artifacts
+        echo "=== Failed Build Logs ==="
+        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+
+    - name: 📤 Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-binaries
+        path: artifacts/*.bin
+
+    - name: 🏷️ Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get-tag.outputs.tag_name }}
+        name: Release ${{ steps.get-tag.outputs.tag_name }}
+        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
+        files: artifacts/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}name: Build & Release Firmware for ESP32-C6
+
+on:
+  push:
+    tags:
+      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Increased timeout for large downloads
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Get tag name
+      id: get-tag
+      run: |
+        tag_name=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+    - name: 🔧 Setup Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
+        arduino-cli version
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.2.0
+        arduino-cli lib install "IRremote"
+        arduino-cli lib install "Adafruit NeoPixel"
+
+    - name: 🏗️ Create build directory
+      run: mkdir -p compiled_binaries
+
+    - name: � Build all firmware
+      run: |
+        chmod +x ./build_all_esp32c6.sh
+        ./build_all_esp32c6.sh || true  # Continue even if some fail
+
+    - name: 📦 Package artifacts
+      run: |
+        mkdir -p artifacts
+        # Only copy .ino.bin files (exclude .merged.bin, .partitions.bin, .bootloader.bin)
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
+        ls -lh artifacts
+        echo "=== Failed Build Logs ==="
+        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+
+    - name: 📤 Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-binaries
+        path: artifacts/*.bin
+
+    - name: 🏷️ Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get-tag.outputs.tag_name }}
+        name: Release ${{ steps.get-tag.outputs.tag_name }}
+        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
+        files: artifacts/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}name: Build & Release Firmware for ESP32-C6
+
+on:
+  push:
+    tags:
+      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Increased timeout for large downloads
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Get tag name
+      id: get-tag
+      run: |
+        tag_name=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+    - name: 🔧 Setup Arduino CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
+        arduino-cli version
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.2.0
+        arduino-cli lib install "IRremote"
+        arduino-cli lib install "Adafruit NeoPixel"
+
+    - name: 🏗️ Create build directory
+      run: mkdir -p compiled_binaries
+
+    - name: � Build all firmware
       run: |
         chmod +x ./build_all_esp32c6.sh
         ./build_all_esp32c6.sh || true  # Continue even if some fail
