@@ -2,6 +2,8 @@ name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
+    branches:
+      - main
     tags:
       - '*.*.*'   # Matches version tags without prefix like 1.0.0
 
