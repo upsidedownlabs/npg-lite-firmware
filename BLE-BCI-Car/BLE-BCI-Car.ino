@@ -12,7 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Copyright (c) 2025 Aman Maheshwari - Aman@upsidedownlabs.tech
-// Copyright (c) 2025 Upside Down Labs - contact@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Krishnanshu Mittal - krishnanshu@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Deepak Khatri - deepak@upsidedownlabs.tech
+// Copyright (c) 2024 - 2025 Upside Down Labs - contact@upsidedownlabs.tech
 
 // At Upside Down Labs, we create open-source DIY neuroscience hardware and software.
 // Our mission is to make neuroscience affordable and accessible for everyone.
@@ -25,209 +27,249 @@
  YouTube video: https://www.youtube.com/watch?v=s3yoZa6kzus
 */
 
+// ----- Existing Includes -----
 #include <Arduino.h>
-#include "BLEDevice.h"
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLE2902.h>
+#include <BLEUtils.h>
+#include <Adafruit_NeoPixel.h>
+#include "esp_timer.h"
+#include <sdkconfig.h>
+#include "hal/efuse_hal.h"
 
-// Define UUIDs:
-static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
-static BLEUUID charUUID_1("beb5483e-36e1-4688-b7f5-ea07361b26a8");
-static BLEUUID charUUID_2("1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e");
+// ----- Chip-specific Pin Definitions -----
+//
+// Use the ESP-IDF config macros to detect the chip.
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+// Store chip revision number
+uint32_t chiprev = efuse_hal_chip_revision();
+#define LED_BUILTIN 7
+#define PIXEL_PIN 15
+#define PIXEL_COUNT 6
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+#define LED_BUILTIN 6
+#define PIXEL_PIN 3
+#define PIXEL_COUNT 4
+#else
+#error "Unsupported board: Please target either ESP32-C6 or ESP32-C3 in your Board Manager."
+#endif
 
-// Some variables to keep track on device connected
-static boolean doConnect = false;
-static boolean connected = false;
-static boolean notify = false;
-static boolean doScan = false;
+#define PIXEL_BRIGHTNESS 7                               // Brightness of Neopixel LED
+#define NUM_CHANNELS 3                                   // Number of ADC channels
+#define SINGLE_SAMPLE_LEN 7                              // Each sample: 1 counter + (3 channels * 2 bytes)
+#define BLOCK_COUNT 10                                   // Batch size: 10 samples per notification
+#define NEW_PACKET_LEN (BLOCK_COUNT * SINGLE_SAMPLE_LEN) // New packet length (70 bytes)
+#define SAMP_RATE 500.0                                  // Sampling rate (500 Hz)
 
-// Define wheel control pins
-const int leftWheelForward = 23;
-const int leftWheelBackward = 24;
-const int rightWheelForward = 8;
-const int rightWheelBackward = 9;
+// Onboard Neopixel at PIXEL_PIN
+Adafruit_NeoPixel pixels(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
-// Define pointer for the BLE connection
-static BLEAdvertisedDevice* myDevice;
-BLERemoteCharacteristic* pRemoteChar_1;
-BLERemoteCharacteristic* pRemoteChar_2;
+// BLE UUIDs – change if desired.
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define DATA_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"    // For ADC data (Notify only)
+#define CONTROL_CHAR_UUID "0000ff01-0000-1000-8000-00805f9b34fb" // For commands (Read/Write/Notify)
 
-// Callback function for Notify function
-static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
-                           uint8_t* pData,
-                           size_t length,
-                           bool isNotify) {
-  if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_1.toString()) {
+// ----- Global Variables -----
+uint8_t batchBuffer[NEW_PACKET_LEN] = {0}; // Buffer to accumulate BLOCK_COUNT samples
+uint8_t samplePacket[SINGLE_SAMPLE_LEN] = {0};
+volatile int sampleIndex = 0;      // How many samples accumulated in current batch
+volatile bool streaming = false;   // True when "START" command is received
+volatile bool bufferReady = false; // Flag set by timer callback
 
-    // convert received bytes to integer
-    uint32_t counter = pData[0];
-    for (int i = 1; i < length; i++) {
-      counter = counter | (pData[i] << i * 8);
-    }
+esp_timer_handle_t adcTimer; // Handle for esp_timer
+BLECharacteristic *pDataCharacteristic;
+BLECharacteristic *pControlCharacteristic;
 
-    // print to Serial
-    Serial.print("Characteristic 1 (Notify) from server: ");
-    Serial.println(counter);  //for debugging purposes
+// Global sample counter (each sample's packet counter)
+uint8_t overallCounter = 0;
 
-    // Control car movement based on received command
-    if (counter == 1) {  // Command for left turn
-      digitalWrite(leftWheelForward, HIGH);
-      digitalWrite(leftWheelBackward, LOW);
-      digitalWrite(rightWheelForward, LOW);
-      digitalWrite(rightWheelBackward, LOW);
-
-    } else if (counter == 2) {  // Command for right turn
-      digitalWrite(rightWheelForward, HIGH);
-      digitalWrite(rightWheelBackward, LOW);
-      digitalWrite(leftWheelForward, LOW);
-      digitalWrite(leftWheelBackward, LOW);
-    } else if (counter == 3) {  // Command to move forward
-      digitalWrite(leftWheelForward, HIGH);
-      digitalWrite(leftWheelBackward, LOW);
-      digitalWrite(rightWheelForward, HIGH);
-      digitalWrite(rightWheelBackward, LOW);
-    } else if (counter == 4) {  // Command to move backward
-      digitalWrite(leftWheelForward, LOW);
-      digitalWrite(leftWheelBackward, HIGH);
-      digitalWrite(rightWheelForward, LOW);
-      digitalWrite(rightWheelBackward, HIGH);
-    } else {  // Default case: stop the car
-      digitalWrite(leftWheelForward, LOW);
-      digitalWrite(leftWheelBackward, LOW);
-      digitalWrite(rightWheelForward, LOW);
-      digitalWrite(rightWheelBackward, LOW);
-    }
+// ----- BLE Server Callbacks -----
+class MyServerCallbacks : public BLEServerCallbacks
+{
+  void onConnect(BLEServer *pServer) override
+  {
+    pixels.setPixelColor(0, pixels.Color(0, PIXEL_BRIGHTNESS, 0)); // Green
+    pixels.show();
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(400);
+    digitalWrite(LED_BUILTIN, LOW);
+    // Serial.println("BLE client connected");
   }
-}
-
-// Callback function that is called whenever a client is connected or disconnected
-class MyClientCallback : public BLEClientCallbacks {
-  void onConnect(BLEClient* pclient) {
-  }
-
-  void onDisconnect(BLEClient* pclient) {
-    connected = false;
-    Serial.println("onDisconnect");  //for debugging purposes
+  void onDisconnect(BLEServer *pServer) override
+  {
+    pixels.setPixelColor(0, pixels.Color(PIXEL_BRIGHTNESS, 0, 0)); // Red
+    pixels.show();
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(400);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(400);
+    digitalWrite(LED_BUILTIN, LOW);
+    // Serial.println("BLE client disconnected");
+    streaming = false;
+    BLEDevice::startAdvertising();
   }
 };
 
-// Function that is run whenever the server is connected
-bool connectToServer() {
-  Serial.print("Forming a connection to ");
-  Serial.println(myDevice->getAddress().toString().c_str());
-
-  BLEClient* pClient = BLEDevice::createClient();
-  Serial.println(" - Created client");
-
-  pClient->setClientCallbacks(new MyClientCallback());
-
-  // Connect to the remove BLE Server.
-  pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
-  Serial.println(" - Connected to server");
-
-  // Obtain a reference to the service we are after in the remote BLE server.
-  BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
-  if (pRemoteService == nullptr) {
-    Serial.print("Failed to find our service UUID: ");
-    Serial.println(serviceUUID.toString().c_str());
-    pClient->disconnect();
-    return false;
-  }
-  Serial.println(" - Found our service");
-
-  connected = true;
-  pRemoteChar_1 = pRemoteService->getCharacteristic(charUUID_1);
-  pRemoteChar_2 = pRemoteService->getCharacteristic(charUUID_2);
-  if (connectCharacteristic(pRemoteService, pRemoteChar_1) == false)
-    connected = false;
-  else if (connectCharacteristic(pRemoteService, pRemoteChar_2) == false)
-    connected = false;
-
-  if (connected == false) {
-    pClient->disconnect();
-    Serial.println("At least one characteristic UUID not found");
-    return false;
-  }
-  return true;
-}
-
-// Function to chech Characteristic
-bool connectCharacteristic(BLERemoteService* pRemoteService, BLERemoteCharacteristic* l_BLERemoteChar) {
-  // Obtain a reference to the characteristic in the service of the remote BLE server.
-  if (l_BLERemoteChar == nullptr) {
-    Serial.print("Failed to find one of the characteristics");
-    Serial.print(l_BLERemoteChar->getUUID().toString().c_str());
-    return false;
-  }
-  Serial.println(" - Found characteristic: " + String(l_BLERemoteChar->getUUID().toString().c_str()));
-
-  if (l_BLERemoteChar->canNotify())
-    l_BLERemoteChar->registerForNotify(notifyCallback);
-
-  return true;
-}
-
-// Scan for BLE servers and find the first one that advertises the service we are looking for.
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
-  //Called for each advertising BLE server.
-  void onResult(BLEAdvertisedDevice advertisedDevice) {
-    Serial.print("BLE Advertised Device found: ");
-    Serial.println(advertisedDevice.toString().c_str());
-
-    // We have found a device, let us now see if it contains the service we are looking for.
-    if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
-
-      BLEDevice::getScan()->stop();
-      myDevice = new BLEAdvertisedDevice(advertisedDevice);
-      doConnect = true;
-      doScan = true;
-
-    }  // Found our server
-  }    // onResult
-};     // MyAdvertisedDeviceCallbacks
-
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Starting Arduino BLE Client application...");
-  BLEDevice::init("");
-
-  // Retrieve a Scanner and set the callback we want to use to be informed when we
-  // have detected a new device.  Specify that we want active scanning and start the
-  // scan to run for 5 seconds.
-  BLEScan* pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setInterval(1349);
-  pBLEScan->setWindow(449);
-  pBLEScan->setActiveScan(true);
-  pBLEScan->start(5, false);
-  // put your setup code here, to run once:
-  // Initialize all motor control pins as OUTPUTs
-  pinMode(leftWheelForward, OUTPUT);
-  pinMode(leftWheelBackward, OUTPUT);
-  pinMode(rightWheelForward, OUTPUT);
-  pinMode(rightWheelBackward, OUTPUT);
-
-  // Start with all pins LOW (motors off)
-  digitalWrite(leftWheelForward, LOW);
-  digitalWrite(leftWheelBackward, LOW);
-  digitalWrite(rightWheelForward, LOW);
-  digitalWrite(rightWheelBackward, LOW);
-}  // End of setup.
-
-void loop() {
-
-  // If the flag "doConnect" is true then we have scanned for and found the desired
-  // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
-  // connected we set the connected flag to be true.
-  if (doConnect == true) {
-
-    if (connectToServer()) {
-      Serial.println("We are now connected to the BLE Server.");
-    } else {
-      Serial.println("We have failed to connect to the server; there is nothin more we will do.");
+// ----- BLE Control Characteristic Callback -----
+// Handles incoming commands ("START", "STOP", "WHORU", "STATUS")
+class ControlCallback : public BLECharacteristicCallbacks
+{
+  void onWrite(BLECharacteristic *characteristic) override
+  {
+    String cmd = characteristic->getValue();
+    cmd.trim();
+    cmd.toUpperCase();
+    if (cmd == "START")
+    {
+      pixels.setPixelColor(0, pixels.Color(0, 0, PIXEL_BRIGHTNESS)); // Blue
+      pixels.show();
+      // Reset counters and start streaming
+      overallCounter = 0;
+      sampleIndex = 0;
+      streaming = true;
+      // Serial.println("Received START command");
     }
-    doConnect = false;
+    else if (cmd == "STOP")
+    {
+      pixels.setPixelColor(0, pixels.Color(0, PIXEL_BRIGHTNESS, 0)); // Green
+      pixels.show();
+      streaming = false;
+      // Serial.println("Received STOP command");
+    }
+    else if (cmd == "WHORU")
+    {
+      characteristic->setValue("NPG-LITE");
+      characteristic->notify();
+      // Serial.println("Received WHORU command");
+    }
+    else if (cmd == "STATUS")
+    {
+      characteristic->setValue(streaming ? "RUNNING" : "STOPPED");
+      characteristic->notify();
+      // Serial.println("Received STATUS command");
+    }
+    else
+    {
+      characteristic->setValue("UNKNOWN COMMAND");
+      characteristic->notify();
+      // Serial.println("Received unknown command");
+    }
   }
+};
 
-  if (doScan) { BLEDevice::getScan()->start(0); }
+// ----- Timer Callback -----
+// This callback is executed every (1e6 / SAMP_RATE) microseconds (i.e. every 2000 µs for 500 Hz)
+void IRAM_ATTR adcTimerCallback(void *arg)
+{
+  if (streaming)
+  {
+    bufferReady = true;
+  }
+}
 
-  delay(1000);
+void setup()
+{
+  // ----- Initialize Neopixel LED -----
+  pixels.begin();
+  // Set the Neopixel to red (indicating device turned on)
+  pixels.setPixelColor(0, pixels.Color(PIXEL_BRIGHTNESS, 0, 0));
+  pixels.show();
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+
+  // Setup packet header is done per sample in the loop.
+  // Set ADC resolution (12-bit)
+  analogReadResolution(12);
+
+  // ----- Initialize BLE -----
+  BLEDevice::init("NPG");
+
+  // Retrieve the BLE MAC address
+  String bleMAC = BLEDevice::getAddress().toString();
+
+  // Set device name
+  String deviceName = "NPG-" + bleMAC;
+  esp_ble_gap_set_device_name(deviceName.c_str());
+
+  // Optionally, request a larger MTU:
+  BLEDevice::setMTU(111);
+
+  BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  // Create Data Characteristic (Notify only) for ADC data
+  pDataCharacteristic = pService->createCharacteristic(
+      DATA_CHAR_UUID,
+      BLECharacteristic::PROPERTY_NOTIFY);
+  pDataCharacteristic->addDescriptor(new BLE2902());
+
+  // Create Control Characteristic (Read/Write/Notify) for command handling
+  pControlCharacteristic = pService->createCharacteristic(
+      CONTROL_CHAR_UUID,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+  pControlCharacteristic->setCallbacks(new ControlCallback());
+
+  pService->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->start();
+  // Serial.println("BLE Advertising started");
+
+  // Create and start periodic timer using esp_timer API
+  const esp_timer_create_args_t timerArgs = {
+      .callback = &adcTimerCallback,
+      .arg = NULL,
+      .dispatch_method = ESP_TIMER_TASK,
+      .name = "adc_timer"};
+  esp_timer_create(&timerArgs, &adcTimer);
+  esp_timer_start_periodic(adcTimer, 1000000 / SAMP_RATE);
+}
+
+void loop()
+{
+  // When streaming is enabled and the timer flag is set...
+  if (streaming && bufferReady)
+  {
+    // Create one sample packet (7 bytes)
+    memset(samplePacket, 0, SINGLE_SAMPLE_LEN); // Clear buffer before use
+    samplePacket[0] = overallCounter;
+    overallCounter = (overallCounter + 1) % 256;
+
+    // Read each ADC channel (channels 0, 1, 2) and store as two bytes (big-endian)
+    for (uint8_t ch = 0; ch < NUM_CHANNELS; ch++)
+    {
+      uint16_t adcValue;
+
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+      if (chiprev == 1)
+        adcValue = map(analogRead(ch), 0, 3249, 0, 4095); // Scale to 12-bit range
+      else
+        adcValue = analogRead(ch);
+#else
+      // Version 0.2 or other chips can use direct reading
+      adcValue = analogRead(ch);
+#endif
+
+      samplePacket[1 + ch * 2] = highByte(adcValue);
+      samplePacket[1 + ch * 2 + 1] = lowByte(adcValue);
+    }
+
+    // Append this samplePacket to the batch buffer
+    memcpy(&batchBuffer[sampleIndex * SINGLE_SAMPLE_LEN], samplePacket, SINGLE_SAMPLE_LEN);
+    sampleIndex++;
+    bufferReady = false;
+
+    // Once we've collected BLOCK_COUNT samples, send them as one BLE notification.
+    if (sampleIndex >= BLOCK_COUNT)
+    {
+      pDataCharacteristic->setValue(batchBuffer, NEW_PACKET_LEN);
+      pDataCharacteristic->notify();
+      sampleIndex = 0;
+    }
+  }
+  yield();
 }
