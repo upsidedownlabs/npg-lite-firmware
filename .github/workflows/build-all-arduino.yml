@@ -77,3 +77,9 @@ jobs:
         files: artifacts/*.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: ⏩ Skip existing release
+      if: steps.check-release.outputs.exists == 'true'
+      run: |
+        echo "Skipping build/release: Release already exists for ${{ github.ref_name }}"
+  
