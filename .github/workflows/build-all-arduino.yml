@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - '*.*.*'   # Matches version tags without prefix like 1.0.0
+      - '*.*.*'   # Matches version tags like 1.0.0
 
 jobs:
   check-release:
@@ -27,7 +27,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const tag = process.env.TAG_NAME;
+            const tag = '${{ steps.extract-tag.outputs.tag_name }}';
             try {
               await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
@@ -42,9 +42,6 @@ jobs:
                 core.setFailed(`Failed to check release: ${error.message}`);
               }
             }
-          result-encoding: string
-        env:
-          TAG_NAME: ${{ steps.extract-tag.outputs.tag_name }}
 
       - name: Debug outputs
         run: |
@@ -53,7 +50,7 @@ jobs:
 
   build:
     needs: check-release
-    if: ${{ needs.check-release.outputs.release_exists == 'false' }}
+    if: needs.check-release.outputs.release_exists == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -75,7 +72,7 @@ jobs:
           arduino-cli lib install "IRremote"
           arduino-cli lib install "Adafruit NeoPixel"
 
-      - name: � Create build directory
+      - name: 📂 Create build directory
         run: mkdir -p compiled_binaries
 
       - name: 🚀 Build all firmware
@@ -96,10 +93,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: firmware-binaries
-          path: artifacts/*.bin
-          
-      - name: 🏷️ Create release
-        if: startsWith(github.ref, 'refs/tags/')
+          path: artifacts/
+
+      - name: 🏷️ Create GitHub Release and Upload Firmware
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-release.outputs.tag_name }}
