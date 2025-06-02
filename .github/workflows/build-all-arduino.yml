@@ -2,10 +2,8 @@ name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
-    branches:
-      - main  
     tags:
-      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+      - '*.*.*'  # e.g., 02.06.2025
 
 jobs:
   build-and-release:
@@ -15,19 +13,23 @@ jobs:
     steps:
     - name: 📦 Checkout code
       uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref_name }}
 
-    - name: 🔍 Check if release exists
+    - name: 🔍 Check if release already exists
       id: check-release
       run: |
-        if gh release view "${{ github.ref_name }}" 2>/dev/null; then
+        TAG="${{ github.ref_name }}"
+        if gh release view "$TAG" > /dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
         else
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🛑 Skip if release exists
+      if: steps.check-release.outputs.exists == 'true'
+      run: |
+        echo "✅ Release already exists for tag ${{ github.ref_name }} — skipping build."
 
     - name: 🔧 Setup Arduino CLI
       if: steps.check-release.outputs.exists == 'false'
@@ -69,7 +71,7 @@ jobs:
         name: firmware-binaries
         path: artifacts/*.bin
 
-    - name: 🏷️ Create release
+    - name: 🏷️ Create GitHub Release
       if: steps.check-release.outputs.exists == 'false'
       uses: softprops/action-gh-release@v2
       with:
@@ -79,9 +81,3 @@ jobs:
         files: artifacts/*.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: ⏩ Skip existing release
-      if: steps.check-release.outputs.exists == 'true'
-      run: |
-        echo "Skipping build/release: Release already exists for ${{ github.ref_name }}"
-  
