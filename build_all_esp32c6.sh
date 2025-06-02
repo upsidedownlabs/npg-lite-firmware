@@ -9,7 +9,6 @@ LIBRARY_DIR="$HOME/Arduino/libraries"
 echo "➡️ Installing dependencies..."
 arduino-cli core update-index
 arduino-cli core install esp32:esp32@3.2.0
-arduino-cli lib install "IRremote"
 arduino-cli lib install "BLE"
 
 # Create fresh output directory
