@@ -3,95 +3,107 @@ name: Build & Release Firmware for ESP32-C6
 on:
   push:
     branches:
-      - main  
+      - main
     tags:
-      - '*.*.*'  # Matches date format tags like dd.mm.yyyy
+      - '*.*.*'   # Matches version tags without prefix like 1.0.0
 
 jobs:
   check-release:
     runs-on: ubuntu-latest
     outputs:
-      release_exists: ${{ steps.check-release.outputs.exists }}
+      release_exists: ${{ steps.check.outputs.exists }}
+      tag_name: ${{ steps.extract-tag.outputs.tag_name }}
     steps:
+      - name: Extract tag name
+        id: extract-tag
+        run: |
+          tag_name="${GITHUB_REF#refs/tags/}"
+          echo "tag_name=${tag_name}" >> $GITHUB_OUTPUT
+          echo "Extracted tag: ${tag_name}"
+
       - name: Check if release exists
-        id: check-release
+        id: check
         uses: actions/github-script@v6
         with:
           script: |
+            const tag = process.env.TAG_NAME;
             try {
-              const response = await github.rest.repos.getReleaseByTag({
+              await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                tag: context.ref.replace('refs/tags/', '')
+                tag: tag
               });
-              return { exists: true };
+              core.setOutput('exists', 'true');
             } catch (error) {
               if (error.status === 404) {
-                return { exists: false };
+                core.setOutput('exists', 'false');
+              } else {
+                core.setFailed(`Failed to check release: ${error.message}`);
               }
-              throw error;
             }
-          result-encoding: json
+          result-encoding: string
+        env:
+          TAG_NAME: ${{ steps.extract-tag.outputs.tag_name }}
+
+      - name: Debug outputs
+        run: |
+          echo "Tag name: ${{ steps.extract-tag.outputs.tag_name }}"
+          echo "Release exists: ${{ steps.check.outputs.exists }}"
 
   build:
     needs: check-release
-    if: needs.check-release.outputs.release_exists == 'false'
+    if: ${{ needs.check-release.outputs.release_exists == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-    - name: 📦 Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
-    - name: Get tag name
-      id: get-tag
-      run: |
-        tag_name=${GITHUB_REF#refs/tags/}
-        echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+      - name: 🔧 Setup Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          sudo mv bin/arduino-cli /usr/local/bin/
+          arduino-cli version
+          arduino-cli config init
+          arduino-cli config set library.enable_unsafe_install true
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.2.0
+          arduino-cli lib install "IRremote"
+          arduino-cli lib install "Adafruit NeoPixel"
 
-    - name: 🔧 Setup Arduino CLI
-      run: |
-        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-        sudo mv bin/arduino-cli /usr/local/bin/
-        arduino-cli version
-        arduino-cli config init
-        arduino-cli config set library.enable_unsafe_install true
-        arduino-cli core update-index
-        arduino-cli core install esp32:esp32@3.2.0
-        arduino-cli lib install "IRremote"
-        arduino-cli lib install "Adafruit NeoPixel"
+      - name: 🏗️ Create build directory
+        run: mkdir -p compiled_binaries
 
-    - name: 🏗️ Create build directory
-      run: mkdir -p compiled_binaries
+      - name: 🚀 Build all firmware
+        run: |
+          chmod +x ./build_all_esp32c6.sh
+          ./build_all_esp32c6.sh || true
 
-    - name: 🚀 Build all firmware
-      run: |
-        chmod +x ./build_all_esp32c6.sh
-        ./build_all_esp32c6.sh || true
+      - name: 📦 Package artifacts
+        run: |
+          mkdir -p artifacts
+          find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+          echo "=== Artifacts (.ino.bin only) ==="
+          ls -lh artifacts
+          echo "=== Failed Build Logs ==="
+          find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
 
-    - name: 📦 Package artifacts
-      run: |
-        mkdir -p artifacts
-        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
-        echo "=== Artifacts (.ino.bin only) ==="
-        ls -lh artifacts
-        echo "=== Failed Build Logs ==="
-        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+      - name: 📤 Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-binaries
+          path: artifacts/*.bin
 
-    - name: 📤 Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: firmware-binaries
-        path: artifacts/*.bin
-
-    - name: 🏷️ Create release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ steps.get-tag.outputs.tag_name }}
-        name: Release ${{ steps.get-tag.outputs.tag_name }}
-        body: Automatic release of firmware version ${{ steps.get-tag.outputs.tag_name }}
-        files: artifacts/*.bin
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🏷️ Create release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check-release.outputs.tag_name }}
+          name: Release ${{ needs.check-release.outputs.tag_name }}
+          body: Automatic release of firmware version ${{ needs.check-release.outputs.tag_name }}
+          files: artifacts/*.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
