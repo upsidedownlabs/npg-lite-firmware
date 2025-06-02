@@ -52,15 +52,3 @@ done
 
 echo -e "\n📊 Compilation summary:"
 find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;
-
-# Process all projects
-find . -maxdepth 1 -type d -name "[!.]*" | while read sketch_dir; do
-  if [ -f "$sketch_dir/$(basename "$sketch_dir").ino" ]; then
-    compile_project "$sketch_dir"
-  else
-    echo "⚠️  Skipping non-Arduino folder: $(basename "$sketch_dir")"
-  fi
-done
-
-echo -e "\n📊 Compilation summary:"
-find "$OUTPUT_DIR" -name "*.bin" -exec ls -lh {} \;

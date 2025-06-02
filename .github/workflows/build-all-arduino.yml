@@ -96,16 +96,15 @@ jobs:
         with:
           name: firmware-binaries
           path: artifacts/*.bin
-
       - name: 🏷️ Create release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: ${{ needs.check-release.outputs.release_exists == 'false' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-release.outputs.tag_name }}
           name: Release ${{ needs.check-release.outputs.tag_name }}
           body: |
-            Automatic release of firmware version ${{ needs.check-release.outputs.tag_name }}
-            Built from: ${{ github.sha }}
+              Automatic release of firmware version ${{ needs.check-release.outputs.tag_name }}
+              Built from: ${{ github.sha }}
           files: artifacts/*.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
