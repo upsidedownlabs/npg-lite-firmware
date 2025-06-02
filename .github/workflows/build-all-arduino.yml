@@ -2,6 +2,8 @@ name: Build & Release Firmware for ESP32-C6
 
 on:
   push:
+    branches:
+      - main  
     tags:
       - '*.*.*'  # Matches date format tags like dd.mm.yyyy
 
