@@ -3,7 +3,7 @@ name: Build & Release Firmware for ESP32-C6
 on:
   push:
     tags:
-      - '*.*.*'  # e.g., 02.06.2025
+      - '*.*.*' 
 
 jobs:
   build-and-release:
