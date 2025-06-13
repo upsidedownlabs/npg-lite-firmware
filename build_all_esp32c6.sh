@@ -2,7 +2,6 @@
 
 # Configuration
 BOARD_FQBN="esp32:esp32:esp32c6"
-BOARD_OPTIONS="UploadMode=cdc,Events=enable,CDCOnBoot=default,USBMode=default"
 OUTPUT_DIR="compiled_binaries"
 LIBRARY_DIR="$HOME/Arduino/libraries"
 
@@ -27,7 +26,6 @@ compile_project() {
   echo -e "\n🛠️  Compiling: $sketch_name"
   if arduino-cli compile \
     --fqbn "$BOARD_FQBN" \
-    --board-options "$BOARD_OPTIONS" \
     --output-dir "$output_path" \
     --libraries "$LIBRARY_DIR" \
     --export-binaries \
@@ -39,6 +37,7 @@ compile_project() {
   else
     echo "❌ Failed"
     echo "   See $output_path/compile.log"
+
   fi
 }
 
