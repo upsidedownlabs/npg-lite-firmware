@@ -39,6 +39,35 @@
 // Declare NeoPixel strip object:
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+// LUT for 1S LiPo (Voltage in ascending order)
+const float voltageLUT[] = {
+  3.27, 3.61, 3.69, 3.71, 3.73, 3.75, 3.77, 3.79, 3.80, 3.82, 
+  3.84, 3.85, 3.87, 3.91, 3.95, 3.98, 4.02, 4.08, 4.11, 4.15, 4.20
+};
+
+const int percentLUT[] = {
+  0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 
+  50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100
+};
+
+const int lutSize = sizeof(voltageLUT) / sizeof(voltageLUT[0]);
+
+// Linear interpolation function
+float interpolatePercentage(float voltage) {
+  // Handle out-of-range voltages
+  if (voltage <= voltageLUT[0]) return 0;
+  if (voltage >= voltageLUT[lutSize - 1]) return 100;
+
+  // Find the nearest LUT entries
+  int i = 0;
+  while (voltage > voltageLUT[i + 1]) i++;
+
+  // Interpolate
+  float v1 = voltageLUT[i], v2 = voltageLUT[i + 1];
+  int p1 = percentLUT[i], p2 = percentLUT[i + 1];
+  return p1 + (voltage - v1) * (p2 - p1) / (v2 - v1);
+}
+
 // notes in the melody:
 int melody[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
@@ -112,7 +141,22 @@ void theaterChaseRainbow(int wait) {
 }
 
 void setup() {
+
   pinMode(LED_MOTOR_PIN, OUTPUT);
+
+  int analogValue = analogRead(A6);
+  float voltage = (analogValue / 1000.0) * 2; // This is for ESP32C6 v0.1
+  voltage += 0.022;
+  float percentage = interpolatePercentage(voltage);
+
+  while(percentage<=10)   // Check if battery is less than 10%
+  {
+    digitalWrite(LED_MOTOR_PIN, HIGH);
+    delay(500);
+    digitalWrite(LED_MOTOR_PIN, LOW);
+    delay(500);
+  }
+
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
