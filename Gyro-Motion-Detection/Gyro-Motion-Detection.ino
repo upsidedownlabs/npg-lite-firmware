@@ -29,6 +29,7 @@ Adafruit_MPU6050 mpu;
 // Invert if an axis feels backwards:
 const float INV_X =  1.0;  // +1 = normal, –1 = flip X
 const float INV_Y =  1.0;  // +1 = normal, –1 = flip Y
+const float INV_Z =  1.0;  // +1 = normal, –1 = flip Z
 
 // How many samples to take for your “zero” calibration:
 const int   CAL_SAMPLES = 200;
@@ -37,9 +38,10 @@ const float CAL_DELAY_MS = 5.0;  // wait between reads
 // These will be filled in by calibrateOffsets():
 float offsetX = 0.0;
 float offsetY = 0.0;
+float offsetZ = 0.0;
 
 void calibrateOffsets() {
-  float sumX = 0, sumY = 0;
+  float sumX = 0, sumY = 0, sumZ = 0;
   sensors_event_t a, g, temp;
 
   Serial.println("Calibrating… keep the board perfectly level and still");
@@ -48,20 +50,24 @@ void calibrateOffsets() {
     mpu.getEvent(&a, &g, &temp);
     sumX += a.acceleration.x;
     sumY += a.acceleration.y;
+    sumZ += a.acceleration.z;
     delay(CAL_DELAY_MS);
   }
   offsetX = sumX / CAL_SAMPLES;
   offsetY = sumY / CAL_SAMPLES;
+  offsetZ = sumZ / CAL_SAMPLES;
 
   Serial.print("Offsets → X: ");
   Serial.print(offsetX, 3);
   Serial.print("  Y: ");
   Serial.println(offsetY, 3);
+  Serial.print("  Z: ");
+  Serial.println(offsetZ, 3);
   Serial.println("Calibration done!");
 }
 
 void setup() {
-  Wire.begin(22, 23);
+  Wire.begin();
   Wire.setClock(400000);
 
   Serial.begin(230400);
@@ -87,12 +93,12 @@ void loop() {
   // Apply your calibration & optional inversion:
   float ax = (a.acceleration.x - offsetX) * INV_X;
   float ay = (a.acceleration.y - offsetY) * INV_Y;
-  float az =  a.acceleration.z;  // still raw if you ever need it
+  float az = (a.acceleration.z - offsetZ) * INV_Z;
 
   // Print only X and Y (comma‑separated):
   // (Your Python script reads parts[0]=ax, parts[1]=ay)
   char buf[64];
-  int len = snprintf(buf, sizeof(buf), "%.3f,%.3f\n", ax, ay);
+  int len = snprintf(buf, sizeof(buf), "%.3f,%.3f,%.3f\n", ax, ay, az);
   Serial.write(buf, len);
 
   // Throttle rate if you like:
