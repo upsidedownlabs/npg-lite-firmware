@@ -1,0 +1,83 @@
+name: Build & Release Firmware for ESP32-C6
+
+on:
+  push:
+    tags:
+      - '*.*.*' 
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Check if release already exists
+      id: check-release
+      run: |
+        TAG="${{ github.ref_name }}"
+        if gh release view "$TAG" > /dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🛑 Skip if release exists
+      if: steps.check-release.outputs.exists == 'true'
+      run: |
+        echo "✅ Release already exists for tag ${{ github.ref_name }} — skipping build."
+
+    - name: 🔧 Setup Arduino CLI
+      if: steps.check-release.outputs.exists == 'false'
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv bin/arduino-cli /usr/local/bin/
+        arduino-cli version
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32@3.2.0
+        arduino-cli lib install "IRremote"
+        arduino-cli lib install "Adafruit NeoPixel"
+
+    - name: 🏗️ Create build directory
+      if: steps.check-release.outputs.exists == 'false'
+      run: mkdir -p compiled_binaries
+
+    - name: 🚀 Build all firmware
+      if: steps.check-release.outputs.exists == 'false'
+      run: |
+        chmod +x ./build_all_esp32c6.sh
+        ./build_all_esp32c6.sh || true
+
+    - name: 📦 Package artifacts
+      if: steps.check-release.outputs.exists == 'false'
+      run: |
+        mkdir -p artifacts
+        find compiled_binaries -name "*.ino.bin" -exec cp {} artifacts \;
+        echo "=== Artifacts (.ino.bin only) ==="
+        ls -lh artifacts
+        echo "=== Failed Build Logs ==="
+        find compiled_binaries -name "compile.log" -exec sh -c 'echo "\n{}:"; cat {}' \;
+
+    - name: 📤 Upload artifacts
+      if: steps.check-release.outputs.exists == 'false'
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-binaries
+        path: artifacts/*.bin
+
+    - name: 🏷️ Create GitHub Release
+      if: steps.check-release.outputs.exists == 'false'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: Automatic release of firmware version ${{ github.ref_name }}
+        files: artifacts/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
