@@ -86,7 +86,7 @@ int         blinkCount         = 0;             // how many valid blinks so far 
 bool        menu           = LOW;            // current LED state
 
 int menuIndex = 0;
-const unsigned long MENU_TIMEOUT_MS = 20000;  // 10 seconds
+const unsigned long MENU_TIMEOUT_MS = 20000;  // 20 seconds
 unsigned long menuStartTime = 0;
 static bool clientConnected = false;
 
@@ -410,7 +410,7 @@ void loop() {
       pixels.clear();
       pixels.show();
       
-      // Set threshold to 80% of max observed beta
+      // Set threshold to 60% of max observed beta
       betaThreshold = maxBetaPct * THRESHOLD_MULTIPLIER;
       
       Serial.print("Calibration complete. Max Beta: ");
@@ -497,7 +497,7 @@ void loop() {
 
   unsigned long resetTimer = millis();
   if (menu && (resetTimer - menuStartTime > MENU_TIMEOUT_MS)) {
-    // 10 seconds elapsed with no double-blink
+    // 20 seconds elapsed with no double-blink
     menu = false;
     Serial.println("Menu timed out → off");
     // optionally send a notify to tell the client:

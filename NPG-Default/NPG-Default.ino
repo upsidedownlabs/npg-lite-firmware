@@ -60,7 +60,7 @@ float interpolatePercentage(float voltage) {
 
   // Find the nearest LUT entries
   int i = 0;
-  while (voltage > voltageLUT[i + 1]) i++;
+  while (i < lutSize - 1 && voltage > voltageLUT[i + 1]) i++;
 
   // Interpolate
   float v1 = voltageLUT[i], v2 = voltageLUT[i + 1];

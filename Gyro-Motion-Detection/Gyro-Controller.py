@@ -29,12 +29,15 @@ SERIAL_PORT = 'COM19'    # ← your port (e.g. 'COM3' or '/dev/ttyUSB0')
 BAUD_RATE    = 230400
 THR_X        = 5.0       # m/s² threshold for left/right
 THR_Y        = 5.0       # m/s² threshold for up/down
+THR_Z        = 5.0
 PRESS_TIME   = 0.1       # seconds to hold each key
 
 KEY_POS_X = 'down'
 KEY_NEG_X = 'up'
 KEY_POS_Y = 'right'
 KEY_NEG_Y = 'left'
+KEY_POS_Z  = 'page_down'
+KEY_NEG_Z  = 'page_up'
 
 def press_and_release(key, duration=PRESS_TIME):
     t0 = time.strftime('%H:%M:%S')
@@ -51,6 +54,7 @@ def main():
 
     x_state = 0  # -1 = neg active, 0 = idle, +1 = pos active
     y_state = 0
+    z_state = 0
 
     while True:
         line = ser.readline().decode(errors='ignore').strip()
@@ -58,13 +62,14 @@ def main():
             continue
 
         parts = line.split(',')
-        # Expect exactly 2 values now (ax, ay)
-        if len(parts) < 2:
+        # Expect exactly 3 values now (ax, ay, az)
+        if len(parts) < 3:
             continue
 
         try:
             ax = float(parts[0])
             ay = float(parts[1])
+            az = float(parts[2])
         except ValueError:
             continue
 
@@ -90,6 +95,16 @@ def main():
             y_state = -1
         elif -THR_Y <= ay <= THR_Y:
             y_state = 0
+
+        # ——— Z Axis ———
+        if   az >  THR_Z and z_state !=  1:
+            threading.Thread(target=press_and_release, args=(KEY_POS_Z,)).start()
+            z_state = 1
+        elif az < -THR_Z and z_state != -1:
+            threading.Thread(target=press_and_release, args=(KEY_NEG_Z,)).start()
+            z_state = -1
+        elif -THR_Z <= az <= THR_Z:
+            z_state = 0
 
 if __name__ == '__main__':
     try:

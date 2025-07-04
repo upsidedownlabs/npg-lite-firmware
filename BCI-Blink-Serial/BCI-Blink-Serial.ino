@@ -341,7 +341,7 @@ void loop() {
           menuIndex=0;    // Deafult index 1
           pixels.setPixelColor(menuIndex, pixels.Color(0, 0, 10));  // Hovered LED Blue 
           pixels.show();
-          blinkCount = 0;         // reset for nex t pair
+          blinkCount = 0;         // reset for next pair
         }
         else
         {

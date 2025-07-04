@@ -96,7 +96,6 @@ void loop() {
   float az = (a.acceleration.z - offsetZ) * INV_Z;
 
   // Print only X and Y (comma‑separated):
-  // (Your Python script reads parts[0]=ax, parts[1]=ay)
   char buf[64];
   int len = snprintf(buf, sizeof(buf), "%.3f,%.3f,%.3f\n", ax, ay, az);
   Serial.write(buf, len);
