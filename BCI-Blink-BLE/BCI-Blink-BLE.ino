@@ -325,7 +325,10 @@ void setup() {
   Serial.begin(BAUD_RATE);
   delay(100);
   pinMode(INPUT_PIN, INPUT);
-  pinMode(7, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(300);
+  digitalWrite(LED_BUILTIN, LOW);
   pixels.begin();
   pixels.clear();
   pixels.show();

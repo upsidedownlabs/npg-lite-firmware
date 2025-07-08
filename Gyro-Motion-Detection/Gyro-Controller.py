@@ -25,7 +25,7 @@ import time
 import keyboard
 
 # ————— CONFIG —————
-SERIAL_PORT = 'COM19'    # ← your port (e.g. 'COM3' or '/dev/ttyUSB0')
+SERIAL_PORT = 'COM12'    # ← your port (e.g. 'COM3' or '/dev/ttyUSB0')
 BAUD_RATE    = 230400
 THR_X        = 5.0       # m/s² threshold for left/right
 THR_Y        = 5.0       # m/s² threshold for up/down
@@ -49,7 +49,11 @@ def press_and_release(key, duration=PRESS_TIME):
     print(f"[{t1}]     Released {key}")
 
 def main():
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    except serial.SerialException as e:
+        print(f"Error: Could not open serial port {SERIAL_PORT}: {e}")
+        return
     print(f"Listening on {SERIAL_PORT} @ {BAUD_RATE} baud...")
 
     x_state = 0  # -1 = neg active, 0 = idle, +1 = pos active
@@ -96,15 +100,15 @@ def main():
         elif -THR_Y <= ay <= THR_Y:
             y_state = 0
 
-        # ——— Z Axis ———
-        if   az >  THR_Z and z_state !=  1:
-            threading.Thread(target=press_and_release, args=(KEY_POS_Z,)).start()
-            z_state = 1
-        elif az < -THR_Z and z_state != -1:
-            threading.Thread(target=press_and_release, args=(KEY_NEG_Z,)).start()
-            z_state = -1
-        elif -THR_Z <= az <= THR_Z:
-            z_state = 0
+        # # ——— Z Axis ———
+        # if   az >  THR_Z and z_state !=  1:
+        #     threading.Thread(target=press_and_release, args=(KEY_POS_Z,)).start()
+        #     z_state = 1
+        # elif az < -THR_Z and z_state != -1:
+        #     threading.Thread(target=press_and_release, args=(KEY_NEG_Z,)).start()
+        #     z_state = -1
+        # elif -THR_Z <= az <= THR_Z:
+        #     z_state = 0
 
 if __name__ == '__main__':
     try:
