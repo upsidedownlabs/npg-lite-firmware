@@ -41,7 +41,7 @@ float envelopeBuffer[ENVELOPE_WINDOW_SIZE] = {0};
 int envelopeIndex = 0;
 float envelopeSum = 0;
 float currentEEGEnvelope = 0;
-
+float BlinkThreshold = 75.0;
 
 // --- Filter Functions ---
 // High-Pass Butterworth IIR digital filter, generated using filter_gen.py.
@@ -127,7 +127,7 @@ void loop() {
   unsigned long nowMs = millis();
 
   // 1) Did we cross threshold and respect per‑blink debounce?
-  if (currentEEGEnvelope > 75.0 && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
+  if (currentEEGEnvelope > BlinkThreshold && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
     lastBlinkTime = nowMs;    // mark this blink
 
     // 2) Count it

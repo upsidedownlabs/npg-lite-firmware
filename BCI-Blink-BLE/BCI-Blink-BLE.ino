@@ -91,6 +91,7 @@ unsigned long menuStartTime = 0;
 static bool clientConnected = false;
 
 bool betaEventFired = false;
+float BlinkThreshold = 75.0;
 
 // ----------------- CALIBRATION VARIABLES -----------------
 enum ProgramState { STATE_CALIBRATING, STATE_RUNNING };
@@ -429,7 +430,7 @@ void loop() {
   unsigned long nowMs = millis();
 
   // 1) Did we cross threshold and respect per‑blink debounce?
-  if (currentEEGEnvelope > 50.0 && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
+  if (currentEEGEnvelope > BlinkThreshold && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
     lastBlinkTime = nowMs;    // mark this blink
 
     // 2) Count it

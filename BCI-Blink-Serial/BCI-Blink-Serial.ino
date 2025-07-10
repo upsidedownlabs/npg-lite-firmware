@@ -75,6 +75,7 @@ int         blinkCount         = 0;             // how many valid blinks so far 
 bool        menu           = LOW;            // current LED state
 
 int menuIndex=0;  // For maintaining menu index
+float BlinkThreshold = 75.0;
 
 
 // ----------------- BUFFERS & TYPES -----------------
@@ -321,7 +322,7 @@ void loop() {
         unsigned long nowMs = millis();
 
     // 1) Did we cross threshold and respect per‑blink debounce?
-    if (currentEEGEnvelope > 50.0 && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
+    if (currentEEGEnvelope > BlinkThreshold && (nowMs - lastBlinkTime) >= BLINK_DEBOUNCE_MS) {
       lastBlinkTime = nowMs;    // mark this blink
 
       // 2) Count it
