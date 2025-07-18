@@ -111,7 +111,7 @@ Test your bio-signals before gaming:
 
 ### 7. Controller Mapping
 
-1. Download and install XOutput software
+1. Download and install XOutput software from [SourceForge](https://sourceforge.net/projects/xoutput/)
 2. Open XOutput and click "Add Controller"
 3. Click "Edit" to configure mappings:
    - **LX (Left Stick X)**: Configure with left/right arm movements
