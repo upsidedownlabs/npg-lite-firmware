@@ -7,9 +7,9 @@ This project transforms the Neuro Playground Lite into a wireless BLE gamepad th
 ## 🧠 How It Works
 
 The system uses three channels of bio-signal acquisition:
-- **Channel 1 (EEG)**: Reads brainwaves from your forehead to detect focus/concentration
-- **Channel 2 (EMG)**: Reads muscle signals from your left arm for directional control
-- **Channel 3 (EMG)**: Reads muscle signals from your right arm for directional control
+- **Channel 1 (EEG)**: Reads brainwaves from your `forehead` to detect focus/concentration
+- **Channel 2 (EMG)**: Reads muscle signals from your `left arm` for directional control
+- **Channel 3 (EMG)**: Reads muscle signals from your `right arm` for directional control
 
 The firmware processes these signals in real-time using FFT analysis and envelope detection, then transmits control commands via Bluetooth Low Energy to your computer.
 
