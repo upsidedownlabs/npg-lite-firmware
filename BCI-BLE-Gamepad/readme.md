@@ -23,6 +23,8 @@ The firmware processes these signals in real-time using FFT analysis and envelop
 
 ## 📋 Requirements
 
+> ⚠️ **Platform Compatibility**: This project currently supports Windows 10/11 only due to XOutput software requirements and specific Bluetooth implementation.
+
 ### Hardware
 - Neuro Playground Lite (NPG Lite)
 - Vibz Playmate
