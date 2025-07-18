@@ -34,7 +34,7 @@ The firmware processes these signals in real-time using FFT analysis and envelop
 - Alcohol Swabs
 - USB to Type-C cable
 
-*All components are included in the Neuro Playground Lite kit available from CrowdSupply.*
+*All components are included in the Neuro Playground Lite kit available from [CrowdSupply](https://www.crowdsupply.com/upside-down-labs/neuro-playground-lite).*
 
 ### Software
 - Arduino IDE
