@@ -186,7 +186,7 @@ int getCurrentBatteryPercentage() {
 
 // ─── EEG Low-Pass Filter (45 Hz) ───
 // Low-Pass Butterworth IIR digital filter, generated using filter_gen.py.
-// Sampling rate: 512.0 Hz, frequency: 45.0 Hz.
+// Sampling rate: 500.0 Hz, frequency: 45.0 Hz.
 // Filter is order 2, implemented as second-order sections (biquads).
 // Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 float EEGFilter(float input) {
@@ -333,10 +333,15 @@ void loop() {
     float env1     = Envelopefilter1.getEnvelope(abs(filtemg1));
     float env2     = Envelopefilter2.getEnvelope(abs(filtemg2));
 
-    if (env1 > 200 && env2 > 200) {  // Switching between button 1 and button 2
+    static unsigned long lastModeSwitch = 0;
+    const unsigned long MODE_SWITCH_DEBOUNCE = 500; // 500ms debounce
+
+    if (env1 > 200 && env2 > 200 && (millis() - lastModeSwitch > MODE_SWITCH_DEBOUNCE)) {  // Switching between button 1 and button 2
       steer = !steer; 
+      lastModeSwitch = millis();
     }
 
+    // Debug on Serial monitor
     Serial.print(env1);
     Serial.print(",  ");
     Serial.print(env2);
