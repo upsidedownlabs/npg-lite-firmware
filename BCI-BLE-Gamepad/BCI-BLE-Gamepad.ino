@@ -78,6 +78,11 @@ typedef struct {
 BandpowerResults smoothedPowers = {0, 0, 0, 0, 0, 0};
 
 // ─── Notch Filter (50 Hz) ───
+// For 50Hz AC noise removal
+// Band-Stop Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 500.0 Hz, frequency: [48.0, 52.0] Hz.
+// Filter is order 2, implemented as second-order sections (biquads).
+// Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 class NotchFilter {
 private:
   struct BiquadState { float z1 = 0, z2 = 0; };
@@ -104,6 +109,10 @@ public:
 NotchFilter filters[3];  // One notch per channel
 
 // ─── EMG High-Pass Filter (70 Hz) ───
+// High-Pass Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 500.0 Hz, frequency: 70.0 Hz.
+// Filter is order 2, implemented as second-order sections (biquads).
+// Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 class EMGHighPassFilter {
 private:
   double z1 = 0.0, z2 = 0.0;
@@ -175,7 +184,11 @@ int getCurrentBatteryPercentage() {
   return (int)percentage;
 }
 
-// ─── EEG Low-Pass Filter ───
+// ─── EEG Low-Pass Filter (45 Hz) ───
+// Low-Pass Butterworth IIR digital filter, generated using filter_gen.py.
+// Sampling rate: 512.0 Hz, frequency: 45.0 Hz.
+// Filter is order 2, implemented as second-order sections (biquads).
+// Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html
 float EEGFilter(float input) {
   float output = input;
   static float z1 = 0, z2 = 0;
